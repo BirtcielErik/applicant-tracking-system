@@ -6,7 +6,7 @@ from django.core.management import call_command
 from django.utils import timezone
 
 from ats.management.commands.seed_demo import DEMO_PASSWORD
-from ats.models import Application, Candidate, JobOpening, StageChange
+from ats.models import Application, Candidate, JobOpening, Skill, StageChange
 from ats.pipeline import Stage
 from ats.tests.conftest import make_application, make_candidate, make_user
 
@@ -19,6 +19,7 @@ def row_counts():
         for model in (
             get_user_model(),
             JobOpening,
+            Skill,
             Candidate,
             Application,
             StageChange,
@@ -49,6 +50,17 @@ def test_seed_demo_includes_a_closed_job_and_an_archived_candidate():
     assert closed.closed_at is not None
     assert closed.applications.exists()
     assert Candidate.objects.get(is_archived=True).applications.exists()
+
+
+def test_seed_demo_tags_every_job_with_skills_and_shares_them_between_jobs():
+    Skill.objects.create(name="Stale")
+
+    call_command("seed_demo", verbosity=0)
+
+    for job in JobOpening.objects.all():
+        assert job.skills.exists()
+    assert Skill.objects.get(name="Python").jobs.count() == 2
+    assert not Skill.objects.filter(name="Stale").exists()
 
 
 def test_seed_demo_creates_a_user_in_each_role():

@@ -1,6 +1,6 @@
 from django.db import transaction
 
-from .models import StageChange
+from .models import Skill, StageChange
 from .pipeline import EXIT_STAGES, refusal_reason
 
 
@@ -14,12 +14,37 @@ def save_candidate(candidate):
     return candidate
 
 
-def save_job(user, job):
+@transaction.atomic
+def save_job(user, job, skills=None):
     if job.pk is None:
         job.created_by = user
     job.full_clean()
     job.save()
+    if skills is not None:
+        job.skills.set(skills)
     return job
+
+
+def get_or_create_skill(name):
+    name = name.strip()
+    existing = Skill.objects.filter(name__iexact=name).first()
+    if existing:
+        return existing
+    skill = Skill(name=name)
+    skill.full_clean()
+    skill.save()
+    return skill
+
+
+def rename_skill(skill, name):
+    skill.name = name.strip()
+    skill.full_clean()
+    skill.save()
+    return skill
+
+
+def delete_skill(skill):
+    skill.delete()
 
 
 @transaction.atomic

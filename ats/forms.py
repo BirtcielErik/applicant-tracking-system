@@ -9,6 +9,9 @@ class DaisyFormMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
+            if isinstance(field.widget, forms.CheckboxSelectMultiple):
+                field.widget.attrs["class"] = "checkbox checkbox-sm"
+                continue
             if isinstance(field.widget, forms.Select):
                 css_class = "select"
             elif isinstance(field.widget, forms.Textarea):
@@ -50,4 +53,5 @@ class CandidateForm(DaisyFormMixin, forms.ModelForm):
 class JobForm(DaisyFormMixin, forms.ModelForm):
     class Meta:
         model = JobOpening
-        fields = ["title", "department", "location", "description"]
+        fields = ["title", "department", "location", "description", "skills"]
+        widgets = {"skills": forms.CheckboxSelectMultiple}

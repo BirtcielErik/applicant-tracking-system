@@ -1,0 +1,54 @@
+{% extends "ats/base.html" %}
+
+{% block title %}Skills | Applicant Tracking System{% endblock %}
+
+{% block content %}
+  <h1 class="text-2xl font-bold mb-4">Skills</h1>
+  {% for message in messages %}
+    <div class="alert alert-success mb-4" role="status">{{ message }}</div>
+  {% endfor %}
+  {% if error %}
+    <div class="alert alert-error mb-4" role="alert">{{ error }}</div>
+  {% endif %}
+  <div class="card bg-base-100 shadow-sm overflow-x-auto">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Jobs</th>
+          {% if perms.ats.rename_delete_skill %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for skill in skills %}
+          <tr>
+            <td>
+              {% if perms.ats.rename_delete_skill %}
+                <form class="join" method="post" action="{% url 'ats:skill_rename' skill.pk %}">
+                  {% csrf_token %}
+                  <input class="input input-sm join-item" type="text" name="name" value="{{ skill.name }}" maxlength="100" aria-label="Name of {{ skill.name }}" required>
+                  <button class="btn btn-sm join-item" type="submit">Rename</button>
+                </form>
+              {% else %}
+                {{ skill }}
+              {% endif %}
+            </td>
+            <td>{{ skill.job_count }}</td>
+            {% if perms.ats.rename_delete_skill %}
+              <td class="text-right">
+                <form method="post" action="{% url 'ats:skill_delete' skill.pk %}"
+                      data-confirm="Delete {{ skill.name }}? It will be removed from {{ skill.job_count }} job{{ skill.job_count|pluralize }}."
+                      onsubmit="return confirm(this.dataset.confirm)">
+                  {% csrf_token %}
+                  <button class="btn btn-error btn-outline btn-sm" type="submit">Delete</button>
+                </form>
+              </td>
+            {% endif %}
+          </tr>
+        {% empty %}
+          <tr><td colspan="3" class="opacity-60">No skills yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

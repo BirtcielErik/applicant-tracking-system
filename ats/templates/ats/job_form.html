@@ -1,4 +1,5 @@
 {% extends "ats/base.html" %}
+{% load static %}
 
 {% block title %}{% if job %}Edit {{ job }}{% else %}New job{% endif %} | Applicant Tracking System{% endblock %}
 
@@ -9,11 +10,16 @@
       <h1 class="card-title">{% if job %}Edit {{ job }}{% else %}New job{% endif %}</h1>
       <p class="text-sm opacity-60">Fields marked <span class="text-error">*</span> are required.</p>
       {% for field in form %}
-        <label class="label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-error" aria-hidden="true">*</span>{% endif %}</label>
-        {{ field }}
-        {% for error in field.errors %}
-          <p class="text-error text-sm">{{ error }}</p>
-        {% endfor %}
+        {% if field.name == "skills" %}
+          <span class="label">{{ field.label }}</span>
+          {% include "ats/partials/skill_picker.html" %}
+        {% else %}
+          <label class="label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-error" aria-hidden="true">*</span>{% endif %}</label>
+          {{ field }}
+          {% for error in field.errors %}
+            <p class="text-error text-sm">{{ error }}</p>
+          {% endfor %}
+        {% endif %}
       {% endfor %}
       <div class="flex gap-2 mt-4">
         <button class="btn btn-primary" type="submit">Save</button>
@@ -21,4 +27,8 @@
       </div>
     </form>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{% static 'ats/js/htmx.min.js' %}"></script>
 {% endblock %}

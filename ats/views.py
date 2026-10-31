@@ -1,4 +1,6 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
+from django.core.exceptions import ValidationError
 from django.db.models import Count, Max, Q, Value
 from django.db.models.functions import Coalesce, Concat
 from django.shortcuts import get_object_or_404, redirect, render
@@ -6,7 +8,7 @@ from django.views.decorators.http import require_POST
 
 from . import services
 from .forms import CandidateForm, JobForm
-from .models import Application, Candidate, JobOpening
+from .models import Application, Candidate, JobOpening, Skill
 from .pipeline import ACTIVE_STAGES, Stage, allowed_targets
 
 
@@ -42,7 +44,9 @@ def job_form_response(request, job=None):
     data = request.POST if request.method == "POST" else None
     form = JobForm(data, instance=job)
     if form.is_valid():
-        saved = services.save_job(request.user, form.save(commit=False))
+        saved = services.save_job(
+            request.user, form.save(commit=False), form.cleaned_data["skills"]
+        )
         return redirect("ats:job_detail", pk=saved.pk)
     return render(request, "ats/job_form.html", {"form": form, "job": job})
 
@@ -75,6 +79,54 @@ def job_detail(request, pk):
 @permission_required("ats.change_jobopening", raise_exception=True)
 def job_edit(request, pk):
     return job_form_response(request, get_object_or_404(JobOpening, pk=pk))
+
+
+@require_POST
+@permission_required("ats.add_skill", raise_exception=True)
+def skill_add(request):
+    selected = request.POST.getlist("skills")
+    skill_error = None
+    try:
+        skill = services.get_or_create_skill(request.POST.get("new_skill", ""))
+        selected.append(skill.pk)
+    except ValidationError as error:
+        skill_error = " ".join(error.messages)
+    form = JobForm(initial={"skills": selected})
+    return render(
+        request,
+        "ats/partials/skill_picker.html",
+        {"form": form, "skill_error": skill_error},
+    )
+
+
+def skill_list_response(request, error=None):
+    skills = Skill.objects.annotate(job_count=Count("jobs"))
+    return render(request, "ats/skill_list.html", {"skills": skills, "error": error})
+
+
+def skill_list(request):
+    return skill_list_response(request)
+
+
+@require_POST
+@permission_required("ats.rename_delete_skill", raise_exception=True)
+def skill_rename(request, pk):
+    skill = get_object_or_404(Skill, pk=pk)
+    old_name = skill.name
+    try:
+        services.rename_skill(skill, request.POST.get("name", ""))
+    except ValidationError as error:
+        return skill_list_response(request, " ".join(error.messages))
+    if skill.name != old_name:
+        messages.success(request, f"Renamed {old_name} to {skill.name}.")
+    return redirect("ats:skill_list")
+
+
+@require_POST
+@permission_required("ats.rename_delete_skill", raise_exception=True)
+def skill_delete(request, pk):
+    services.delete_skill(get_object_or_404(Skill, pk=pk))
+    return redirect("ats:skill_list")
 
 
 def candidate_list(request):

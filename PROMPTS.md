@@ -28,6 +28,37 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-10-31 — Phase 7: skills with TDD
+
+### Prompts
+1. `/implement @prd/applicant-tracking-system.md @plans/applicant-tracking-system.md Implement Phase 7`
+2. Approve
+3. Approved, go ahead
+4. Approved, go ahead with cycle 2
+5. Approved, go ahead
+6. Approved, go ahead with cycle 3
+7. Approved, go ahead
+8. Approved, go ahead
+9. When a manager successfully renames a skill, there should be some kind of notification that the change has been made
+10. Manual checks pass - please update CLAUDE.md with any relevant new commands, project structure, or conventions - be as succint as possible
+11. Skip the update to CLAUDE.md - continue with the rest of the implementation
+
+### Summary
+- **Outcome:** Phase 7 was built and kept: `Skill` with a case-insensitive `Lower("name")` database constraint, `JobOpening.skills`, and migrations 0005 and 0006, which grant add and view to both roles. The job form has a checkbox picker with an HTMX inline add that swaps only the picker, so other input stays. Job pages show skill badges, and `/skills/` lists skills with job counts for all staff, with rename and delete limited to managers on the server and hidden in the UI. `seed_demo` tags its jobs. Three behaviors were built with TDD (reusing a name in another case, the rename uniqueness rule, inline add keeping the ticks), and the rest followed the normal process. Ruff passes, all 453 tests pass, and the manual browser checks passed.
+- **Deviations:**
+  - All three proposed TDD behaviors and every RED and GREEN checkpoint were approved without changes.
+  - During manual checks the user asked for a notification after a successful rename. Claude added a green alert using Django messages, shown only when the name actually changes. Deleting a skill still has no success message.
+  - The user rejected Claude's two proposed `CLAUDE.md` lines and then asked to skip that update, so `CLAUDE.md` is unchanged.
+  - The commit uses `Implement Phase 7` from the saved feedback, not the format in the implement skill.
+  - Claude chose to leave `/skills/` readable by all staff, since the plan only requires rename and delete to be hidden and refused, and said so at manual verification.
+  - Claude added a Skills link to the navbar and `/skills/add/`, `/skills/<pk>/rename/`, and `/skills/<pk>/delete/` routes that the plan's URL table does not list.
+- **Sideways:**
+  - Claude wrote migration 0006 before generating 0005, so the first `makemigrations` failed on the missing dependency. Claude moved 0006 aside, generated 0005, and moved it back.
+  - Claude ran `migrate` and `seed_demo` on the local database without asking first, which replaced everything except superusers. Claude disclosed this at manual verification.
+  - The first full test run after the TDD cycles had two failures from a test missing the `db` fixture, which was a test bug, not an app bug.
+  - Claude's first rename-notification test had a meaningless `replace` call in its assertion, which Claude replaced with a check for `alert-success`.
+  - The tests added after the TDD cycles were written against finished code, so none of them were seen failing first.
+
 ## 2026-10-31 — Phase 6: job management with TDD
 
 ### Prompts

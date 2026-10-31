@@ -41,6 +41,12 @@ def test_recruiter_can_work_with_pipeline_models_but_not_delete(recruiter):
     assert not recruiter.has_perm("ats.change_stagechange")
 
 
+def test_recruiter_can_add_and_view_skills_but_not_change_or_delete(recruiter):
+    assert recruiter.has_perms(["ats.add_skill", "ats.view_skill"])
+    assert not recruiter.has_perm("ats.change_skill")
+    assert not recruiter.has_perm("ats.delete_skill")
+
+
 def test_role_permissions_combine(recruiter, manager, dual_role_user):
     manager_only = {f"ats.{codename}" for codename in MANAGER_ONLY_CODENAMES}
     recruiter_perms = recruiter.get_all_permissions()

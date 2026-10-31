@@ -1,9 +1,15 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import Application, Candidate, JobOpening, StageChange, User
+from .models import Application, Candidate, JobOpening, Skill, StageChange, User
 
 admin.site.register(User, UserAdmin)
+
+
+@admin.register(Skill)
+class SkillAdmin(admin.ModelAdmin):
+    list_display = ["name"]
+    search_fields = ["name"]
 
 
 @admin.register(Candidate)

@@ -1,0 +1,22 @@
+<div id="skill-picker">
+  <div class="flex flex-wrap gap-x-4 gap-y-2">
+    {% for option in form.skills %}
+      <label class="label gap-2 text-base-content">{{ option.tag }} {{ option.choice_label }}</label>
+    {% empty %}
+      <p class="text-sm opacity-60">No skills yet.</p>
+    {% endfor %}
+  </div>
+  {% for error in form.skills.errors %}
+    <p class="text-error text-sm">{{ error }}</p>
+  {% endfor %}
+  {% if perms.ats.add_skill %}
+    <div class="join w-full mt-2">
+      <input class="input join-item w-full" type="text" name="new_skill" maxlength="100" placeholder="Add a skill" aria-label="Add a skill"
+             hx-on:keydown="if (event.key === 'Enter') { event.preventDefault(); this.nextElementSibling.click(); }">
+      <button class="btn join-item" type="button" hx-post="{% url 'ats:skill_add' %}" hx-target="#skill-picker" hx-swap="outerHTML">Add</button>
+    </div>
+    {% if skill_error %}
+      <p class="text-error text-sm">{{ skill_error }}</p>
+    {% endif %}
+  {% endif %}
+</div>

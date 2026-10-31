@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from .pipeline import Stage
@@ -52,6 +53,23 @@ class Candidate(models.Model):
         self.email = self.email.lower()
 
 
+class Skill(models.Model):
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        ordering = [Lower("name")]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("name"),
+                name="unique_skill_name_case_insensitive",
+                violation_error_message="A skill with this name already exists.",
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
 class JobOpening(models.Model):
     class Status(models.TextChoices):
         OPEN = "open", "Open"
@@ -62,6 +80,7 @@ class JobOpening(models.Model):
     location = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
     status = models.CharField(max_length=10, choices=Status, default=Status.OPEN)
+    skills = models.ManyToManyField(Skill, blank=True, related_name="jobs")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,

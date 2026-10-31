@@ -8,7 +8,8 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
-from ats.models import Application, Candidate, JobOpening, StageChange
+from ats import services
+from ats.models import Application, Candidate, JobOpening, Skill, StageChange
 from ats.pipeline import Stage
 
 DEMO_PASSWORD = "demo-password"
@@ -26,6 +27,13 @@ JOBS = [
     ("Data Analyst", "Operations", "Remote"),
 ]
 CLOSED_JOB = "Data Analyst"
+
+JOB_SKILLS = {
+    "Backend Engineer": ["Python", "Django", "SQL"],
+    "Product Designer": ["Figma", "User Research"],
+    "Account Executive": ["Negotiation", "Salesforce"],
+    "Data Analyst": ["Python", "SQL", "Tableau"],
+}
 
 LeadSource = Candidate.LeadSource
 CANDIDATES = [
@@ -90,6 +98,8 @@ class Command(BaseCommand):
             )
             for title, department, location in JOBS
         }
+        for title, names in JOB_SKILLS.items():
+            jobs[title].skills.set(services.get_or_create_skill(n) for n in names)
         candidates = {row[0]: self.seed_candidate(*row) for row in CANDIDATES}
         for first_name, title, days_ago, stages in APPLICATIONS:
             self.seed_application(
@@ -112,6 +122,7 @@ class Command(BaseCommand):
         Application.objects.all().delete()
         Candidate.objects.all().delete()
         JobOpening.objects.all().delete()
+        Skill.objects.all().delete()
         get_user_model().objects.filter(is_superuser=False).delete()
 
     def seed_user(self, username, roles):
