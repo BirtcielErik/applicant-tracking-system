@@ -16,7 +16,7 @@ An internal, staff-only Django web application for hiring teams to manage job op
 
 - A single Django app holds the whole domain.
 - A custom User model is defined from the start.
-- A pipeline rules module holds the stage definitions, the transition rules, `refusal_reason` (the single source of each rule and its message), and `can_transition`, which wraps it. The UI and server share this check, and the server is authoritative.
+- A pipeline rules module holds the stage definitions, the transition rules, `refusal_reason` (the single source of each rule and its message), and `can_transition`, which wraps it. The UI and server share this check, and the server is authoritative. Board cards carry `allowed_targets` in `data-allowed-stages`, which `board.js` reads to highlight columns.
 - A services module holds every operation that changes data, and each operation writes its own stage-change records.
 - Views are thin: they check login and permissions, call a service, and render a template or partial.
 - Every view requires login. Manager-only actions are checked on the server and hidden in the UI.

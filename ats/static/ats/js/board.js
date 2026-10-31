@@ -5,7 +5,21 @@ function initBoard() {
       group: "pipeline",
       sort: false,
       animation: 150,
+      onStart(event) {
+        const allowed = event.item.dataset.allowedStages.split(" ");
+        board.querySelectorAll("[data-stage]").forEach((target) => {
+          if (target === event.from) return;
+          target.closest("section").dataset.drop = allowed.includes(
+            target.dataset.stage,
+          )
+            ? "allowed"
+            : "blocked";
+        });
+      },
       onEnd(event) {
+        board.querySelectorAll("[data-drop]").forEach((section) => {
+          delete section.dataset.drop;
+        });
         if (event.from === event.to) return;
         htmx.ajax("POST", event.item.dataset.moveUrl, {
           target: board,

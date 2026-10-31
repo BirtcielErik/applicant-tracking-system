@@ -1,14 +1,20 @@
 from django.contrib.auth.decorators import permission_required
+from django.db.models import Max
+from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
 from . import services
 from .models import Application, JobOpening
-from .pipeline import Stage
+from .pipeline import Stage, allowed_targets
 
 
-def board_context(job, move_error=None):
-    applications = job.applications.select_related("candidate")
+def board_context(job, user, move_error=None):
+    applications = job.applications.select_related("candidate").annotate(
+        last_moved_at=Coalesce(Max("stage_changes__changed_at"), "created_at")
+    )
+    for application in applications:
+        application.allowed_stages = " ".join(allowed_targets(user, application))
     columns = [
         {
             "stage": stage,
@@ -26,7 +32,7 @@ def home(request):
 
 def job_detail(request, pk):
     job = get_object_or_404(JobOpening, pk=pk)
-    return render(request, "ats/job_detail.html", board_context(job))
+    return render(request, "ats/job_detail.html", board_context(job, request.user))
 
 
 @require_POST
@@ -43,5 +49,5 @@ def application_move(request, pk):
     return render(
         request,
         "ats/partials/board.html",
-        board_context(application.job, move_error),
+        board_context(application.job, request.user, move_error),
     )

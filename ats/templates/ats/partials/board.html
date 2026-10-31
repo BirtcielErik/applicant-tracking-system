@@ -7,7 +7,7 @@
 {% endif %}
 <div class="flex gap-3 overflow-x-auto pb-2">
   {% for column in columns %}
-    <section class="card bg-base-100 shadow-sm w-56 shrink-0">
+    <section class="card bg-base-100 shadow-sm w-56 shrink-0 transition data-[drop=allowed]:ring-2 data-[drop=allowed]:ring-inset data-[drop=allowed]:ring-primary data-[drop=allowed]:bg-primary/10 data-[drop=blocked]:opacity-40">
       <div class="card-body p-3">
         <h2 class="flex items-center justify-between text-sm font-semibold">
           {{ column.label }}
@@ -15,9 +15,12 @@
         </h2>
         <ul class="flex flex-1 flex-col gap-2 min-h-24" data-stage="{{ column.stage }}">
           {% for application in column.applications %}
-            <li class="rounded-box bg-base-200 p-2 cursor-grab" data-move-url="{% url 'ats:application_move' application.pk %}">
+            <li class="rounded-box bg-base-200 p-2 cursor-grab" data-move-url="{% url 'ats:application_move' application.pk %}" data-allowed-stages="{{ application.allowed_stages }}">
               <p class="text-sm font-medium">{{ application.candidate }}</p>
               <p class="text-xs opacity-60 truncate">{{ application.candidate.email }}</p>
+              <p class="text-xs opacity-60">{{ application.candidate.get_lead_source_display }}{% if application.candidate.lead_source_detail %}: {{ application.candidate.lead_source_detail }}{% endif %}</p>
+              <p class="text-xs opacity-60">Applied {{ application.application_date|date:"M j, Y" }}</p>
+              <p class="text-xs opacity-60">Moved {{ application.last_moved_at|timesince }} ago</p>
             </li>
           {% endfor %}
         </ul>

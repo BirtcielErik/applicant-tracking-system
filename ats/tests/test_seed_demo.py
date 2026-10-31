@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 import pytest
 from django.contrib.auth import authenticate, get_user_model
 from django.core.management import call_command
+from django.utils import timezone
 
 from ats.management.commands.seed_demo import DEMO_PASSWORD
 from ats.models import Application, Candidate, JobOpening, StageChange
@@ -29,6 +32,14 @@ def test_seed_demo_populates_every_stage_with_matching_history():
     assert set(Application.objects.values_list("stage", flat=True)) == set(Stage.values)
     for application in Application.objects.all():
         assert application.stage_changes.first().to_stage == application.stage
+
+
+def test_seed_demo_backdates_stage_history():
+    call_command("seed_demo", verbosity=0)
+
+    for application in Application.objects.all():
+        latest = application.stage_changes.first()
+        assert latest.changed_at < timezone.now() - timedelta(hours=1)
 
 
 def test_seed_demo_includes_a_closed_job_and_an_archived_candidate():

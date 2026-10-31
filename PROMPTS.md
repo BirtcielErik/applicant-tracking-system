@@ -28,6 +28,33 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-10-31 — Phase 4: drag feedback and rich cards with TDD
+
+### Prompts
+1. `/implement @prd/applicant-tracking-system.md @plans/applicant-tracking-system.md Implement Phase 4`
+2. I approve
+3. Approved, go ahead
+4. Approved, go ahead with cycle 2
+5. Approved, go ahead with cycle 3
+6. Approved, go ahead
+7. Approved, go ahead with the rest of Phase 4
+8. That does not belong in README.md - it can be a part of my manual verification process of this phase
+9. Update the plan and PRD to reflect the deletion of the checklist
+10. Manual checks pass - please update CLAUDE.md with any relevant new commands, project structure, or conventions - be as succint as possible
+
+### Summary
+- **Outcome:** Phase 4 was built and kept: `allowed_targets` in `ats/pipeline.py`, a `data-allowed-stages` attribute on each card, column highlighting and fading in `board.js` during a drag, and cards showing lead source and detail, application date, and time since the last move. The "Moved" time comes from a single annotated board query. `seed_demo` now backdates stage history. Three behaviors were approached with TDD (allowed targets by role, targets after a move, last-moved time), and the rest followed the normal process. Ruff passes, all 344 tests pass, and the manual browser checks passed. `CLAUDE.md` gained one line on `allowed_targets`.
+- **Deviations:**
+  - The user rejected the README checklist the plan required and made it part of manual verification instead, then had it removed from the plan and PRD. The PRD now says drag-and-drop is checked by hand.
+  - All three proposed TDD behaviors and every checkpoint were approved without changes.
+  - Claude added the `seed_demo` backdating and its test without being asked, because every demo card would otherwise have read "Moved 0 minutes ago". It was flagged at manual verification.
+- **Sideways:**
+  - Cycle 2 never showed RED. Its test passed on the first run because cycle 1's code already covered it, a shared code path Claude missed when choosing the behaviors. Claude said so and the test was kept as a regression test.
+  - Rejecting the README edit also cancelled the `seed_demo` edit and the check run in the same batch. Claude resubmitted the `seed_demo` edit on its own, since the rejection only named the README, and said so.
+  - Managers viewing a board still cost one extra query per Rejected or Withdrawn card, from `stage_before_exit`. Claude left this in place, and the query-count test covers active-stage cards only.
+  - Claude did not run the JavaScript in a browser, so the highlighting was first exercised during the user's manual checks.
+  - Claude left `seed_demo` for the user to run on their database because it deletes data.
+
 ## 2026-10-31 — Phase 3: server-enforced transition rules with TDD
 
 ### Prompts

@@ -135,17 +135,33 @@ class Command(BaseCommand):
             stage=stages[-1],
             application_date=timezone.localdate() - timedelta(days=days_ago),
         )
-        StageChange.objects.create(
-            application=application,
-            to_stage=stages[0],
-            changed_by=user,
-            reason=StageChange.Reason.APPLICATION_CREATED,
+        self.seed_stage_change(
+            application,
+            "",
+            stages[0],
+            user,
+            StageChange.Reason.APPLICATION_CREATED,
+            timedelta(days=days_ago),
         )
-        for from_stage, to_stage in pairwise(stages):
-            StageChange.objects.create(
-                application=application,
-                from_stage=from_stage,
-                to_stage=to_stage,
-                changed_by=user,
-                reason=StageChange.Reason.NORMAL_MOVE,
+        # Moves are spread evenly between the application date and today.
+        step = timedelta(days=days_ago) / len(stages)
+        for index, (from_stage, to_stage) in enumerate(pairwise(stages), start=1):
+            self.seed_stage_change(
+                application,
+                from_stage,
+                to_stage,
+                user,
+                StageChange.Reason.NORMAL_MOVE,
+                step * (len(stages) - index),
             )
+
+    def seed_stage_change(self, application, from_stage, to_stage, user, reason, age):
+        change = StageChange.objects.create(
+            application=application,
+            from_stage=from_stage,
+            to_stage=to_stage,
+            changed_by=user,
+            reason=reason,
+        )
+        # changed_at is set automatically, so backdating needs a separate update.
+        StageChange.objects.filter(pk=change.pk).update(changed_at=timezone.now() - age)

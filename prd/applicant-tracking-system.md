@@ -196,7 +196,7 @@ Staff can:
 - pytest with pytest-django, test data from fixtures in a shared conftest (for example recruiter, manager, dual-role user, open job, candidate, applications at each stage) plus small helper functions. No factory library.
 - **Rule and service tests** (the majority): each transition rule for each role; close job (blocked by Offer, rejects active, leaves outcomes alone, blocks new applications); reopen job with and without restore; archive/unarchive with and without restore; duplicate application refused; closed job and archived candidate refused; future application date refused; email lowercasing and duplicate email refused; case-insensitive skill uniqueness; stage changes recorded with correct reasons.
 - **View tests** with Django's test client: login required everywhere; manager-only actions forbidden to recruiters; the move endpoint returns the board for both allowed and blocked moves and only changes the database when allowed; form validation errors render; pickers exclude invalid choices.
-- No browser/end-to-end tests. A manual drag-and-drop checklist lives in the README.
+- No browser/end-to-end tests. Drag-and-drop is checked by hand during manual verification.
 - Ruff runs over the codebase as linter and formatter.
 
 ## Out of Scope

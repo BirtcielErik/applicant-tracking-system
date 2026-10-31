@@ -143,7 +143,7 @@ The complete transition table and in-progress guard in the rules module, enforce
 
 ### What to build
 
-Make the board show the rules before a drop. Each card carries its allowed target stages, computed by the same `can_transition` check for the signed-in user, and columns are highlighted or faded while it is dragged. Cards gain the full set of details. No rules change in this phase. The README gains the manual drag-and-drop checklist.
+Make the board show the rules before a drop. Each card carries its allowed target stages, computed by the same `can_transition` check for the signed-in user, and columns are highlighted or faded while it is dragged. Cards gain the full set of details. No rules change in this phase.
 
 ### Acceptance criteria
 
@@ -151,7 +151,6 @@ Make the board show the rules before a drop. Each card carries its allowed targe
 - [ ] The highlighted set for each card matches `can_transition` for the signed-in user's role
 - [ ] Highlighting still works after the board is re-rendered by a move
 - [ ] Each card shows candidate name, email, lead source and detail, application date, and time since last move
-- [ ] The README contains a manual drag-and-drop checklist covering both roles
 - [ ] View tests confirm the rendered allowed targets differ correctly by role
 
 ---

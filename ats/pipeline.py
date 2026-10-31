@@ -79,3 +79,9 @@ def reopen_refusal_reason(user, application, target):
 
 def can_transition(user, application, target):
     return refusal_reason(user, application, target) is None
+
+
+def allowed_targets(user, application):
+    return [
+        target for target in Stage.values if can_transition(user, application, target)
+    ]
