@@ -1,0 +1,33 @@
+{% extends "ats/base.html" %}
+
+{% block title %}Unarchive {{ candidate }} | Applicant Tracking System{% endblock %}
+
+{% block content %}
+  <div class="card bg-base-100 shadow-sm max-w-lg">
+    <div class="card-body">
+      <h1 class="card-title">Unarchive {{ candidate }}</h1>
+      {% if candidate.is_archived %}
+        <p>Unarchiving this candidate returns them to default lists and lets them receive applications again.</p>
+        <form method="post">
+          {% csrf_token %}
+          {% if restore_count %}
+            <label class="label mt-2">
+              <input class="checkbox" type="checkbox" name="restore">
+              <span>Restore {{ restore_count }} application{{ restore_count|pluralize }} withdrawn by the archive to {{ restore_count|pluralize:"its,their" }} previous stage{{ restore_count|pluralize }}</span>
+            </label>
+            <p class="text-sm opacity-60 mt-1">Applications for jobs closed since the archive are skipped.</p>
+          {% endif %}
+          <div class="flex gap-2 mt-4">
+            <button class="btn btn-primary" type="submit">Unarchive candidate</button>
+            <a class="btn btn-ghost" href="{% url 'ats:candidate_detail' candidate.pk %}">Cancel</a>
+          </div>
+        </form>
+      {% else %}
+        <div class="alert alert-info" role="status">This candidate is not archived.</div>
+        <div class="mt-4">
+          <a class="btn btn-ghost" href="{% url 'ats:candidate_detail' candidate.pk %}">Back to candidate</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

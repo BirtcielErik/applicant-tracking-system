@@ -28,6 +28,33 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-10-31 — Phase 11: archive and unarchive candidates with TDD
+
+### Prompts
+1. `/implement @prd/applicant-tracking-system.md @plans/applicant-tracking-system.md Implement Phase 11`
+2. Approve both choices
+3. Approved
+4. Approved - move on
+5. Approved
+6. Approved - move on
+7. Can we add a small badge to a card that shows if a candidate is archived from the board?
+8. Checks pass - finish the phase
+
+### Summary
+- **Outcome:** Added manager-only archive and unarchive as confirmation pages, backed by `archive_candidate` and `unarchive_candidate`. The candidates list hides archived people by default and gained a "Show archived" toggle through `?archived=on`, which works with search. Two behaviors were built with TDD (selective restore on unarchive, and the list toggle), and the rest followed the normal process. Archived badges appear on the candidate page, the list, and board cards. `seed_demo` now archives Kira through the real service, with a new Product Designer application that the archive withdraws, so the restore can be demonstrated. Ruff passes, all 573 tests pass, and the user confirmed the manual checks.
+- **Deviations:**
+  - Claude proposed two TDD behaviors rather than three, because the Phase 10 pattern already settled the rest. The user approved both, and every RED and GREEN checkpoint was approved without changes.
+  - The user added the board-card badge during manual verification, which is outside Phase 11's stories.
+  - Claude made `is_archived` read-only in Django Admin without being asked, matching job `status`, because an admin edit would skip withdrawing the applications. Hard deletes in the admin are unchanged.
+  - Claude extracted `latest_changes_with_reason` and `restore_message` so job and candidate restores share code, and moved `fail_on_second_move` into `conftest.py`. These touched Phase 10 code.
+  - The commit uses `Implement Phase 11` with no co-author line, from the saved feedback, not the format in the implement skill.
+- **Sideways:**
+  - The tests added after the TDD cycles were written against finished code, so none of them were seen failing first.
+  - An application withdrawn by an archive and skipped because its job had closed is not picked up by a later job reopen, because its latest change is not the close. A manager has to reopen it by hand on the board.
+  - Claude ran one pointless no-op shell command while writing the tests. It changed nothing.
+  - The first message about checking the badge had a garbled sentence about which cards show it.
+  - Claude did not run the pages in a browser, so the toggle's auto-submit and the badges were first exercised during the user's manual checks. Claude left `seed_demo` for the user to run because it deletes data.
+
 ## 2026-10-31 — Phase 10: close and reopen jobs with TDD
 
 ### Prompts

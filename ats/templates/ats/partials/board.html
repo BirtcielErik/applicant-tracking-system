@@ -16,7 +16,7 @@
         <ul class="flex flex-1 flex-col gap-2 min-h-24" data-stage="{{ column.stage }}">
           {% for application in column.applications %}
             <li class="rounded-box bg-base-200 p-2 cursor-grab" data-move-url="{% url 'ats:application_move' application.pk %}" data-allowed-stages="{{ application.allowed_stages }}">
-              <p class="text-sm font-medium"><a class="link link-hover" href="{% url 'ats:candidate_detail' application.candidate_id %}">{{ application.candidate }}</a></p>
+              <p class="text-sm font-medium"><a class="link link-hover" href="{% url 'ats:candidate_detail' application.candidate_id %}">{{ application.candidate }}</a>{% if application.candidate.is_archived %} <span class="badge badge-neutral badge-xs">Archived</span>{% endif %}</p>
               <p class="text-xs opacity-60 truncate">{{ application.candidate.email }}</p>
               <p class="text-xs opacity-60">{{ application.candidate.get_lead_source_display }}{% if application.candidate.lead_source_detail %}: {{ application.candidate.lead_source_detail }}{% endif %}</p>
               <p class="text-xs opacity-60">Applied {{ application.application_date|date:"M j, Y" }}</p>

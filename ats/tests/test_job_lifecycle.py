@@ -7,7 +7,12 @@ from ats import services
 from ats.admin import JobOpeningAdmin
 from ats.models import Application, Candidate, JobOpening, StageChange
 from ats.pipeline import ACTIVE_STAGES, Stage
-from ats.tests.conftest import make_application, make_candidate, make_user
+from ats.tests.conftest import (
+    fail_on_second_move,
+    make_application,
+    make_candidate,
+    make_user,
+)
 
 
 def make_applications(job, stages, prefix="Applicant"):
@@ -94,19 +99,6 @@ def test_reopen_with_restore_returns_only_applications_rejected_by_the_close(
         assert application.stage == Stage.REJECTED
         reasons = application.stage_changes.values_list("reason", flat=True)
         assert StageChange.Reason.JOB_REOPENED not in reasons
-
-
-def fail_on_second_move(monkeypatch):
-    record_move = services.record_move
-    calls = []
-
-    def failing_record_move(*args):
-        calls.append(args)
-        if len(calls) == 2:
-            raise RuntimeError("Database failure")
-        record_move(*args)
-
-    monkeypatch.setattr(services, "record_move", failing_record_move)
 
 
 def test_close_returns_the_number_rejected(job, manager):

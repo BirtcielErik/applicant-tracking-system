@@ -71,6 +71,17 @@ def test_seed_demo_closes_its_job_through_the_real_close():
     assert closed_out.filter(candidate__is_archived=True).count() == 1
 
 
+def test_seed_demo_archives_its_candidate_through_the_real_archive():
+    call_command("seed_demo", verbosity=0)
+
+    archived = Candidate.objects.get(is_archived=True)
+    withdrawn = archived.applications.get(
+        stage_changes__reason=StageChange.Reason.CANDIDATE_ARCHIVED
+    )
+    assert withdrawn.stage == Stage.WITHDRAWN
+    assert withdrawn.job.status == JobOpening.Status.OPEN
+
+
 def test_seed_demo_tags_every_job_with_skills_and_shares_them_between_jobs():
     Skill.objects.create(name="Stale")
 

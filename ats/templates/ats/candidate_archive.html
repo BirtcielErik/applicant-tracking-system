@@ -1,0 +1,35 @@
+{% extends "ats/base.html" %}
+
+{% block title %}Archive {{ candidate }} | Applicant Tracking System{% endblock %}
+
+{% block content %}
+  <div class="card bg-base-100 shadow-sm max-w-lg">
+    <div class="card-body">
+      <h1 class="card-title">Archive {{ candidate }}</h1>
+      {% if candidate.is_archived %}
+        <div class="alert alert-info" role="status">This candidate is already archived.</div>
+      {% elif offers %}
+        <div class="alert alert-error" role="alert">This candidate cannot be archived while an application is in Offer. Resolve these first:</div>
+        <ul class="list-disc pl-6">
+          {% for application in offers %}
+            <li><a class="link" href="{% url 'ats:job_detail' application.job_id %}">{{ application.job }}</a></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>Archiving this candidate will withdraw <strong>{{ withdraw_count }}</strong> active application{{ withdraw_count|pluralize }}. Hired, Rejected, and Withdrawn applications are not changed, and the candidate will be hidden from default lists and cannot receive new applications.</p>
+        <form method="post">
+          {% csrf_token %}
+          <div class="flex gap-2 mt-4">
+            <button class="btn btn-error" type="submit">Archive candidate</button>
+            <a class="btn btn-ghost" href="{% url 'ats:candidate_detail' candidate.pk %}">Cancel</a>
+          </div>
+        </form>
+      {% endif %}
+      {% if candidate.is_archived or offers %}
+        <div class="mt-4">
+          <a class="btn btn-ghost" href="{% url 'ats:candidate_detail' candidate.pk %}">Back to candidate</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

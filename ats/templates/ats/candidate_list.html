@@ -9,10 +9,15 @@
       <a class="btn btn-primary btn-sm" href="{% url 'ats:candidate_create' %}">New candidate</a>
     {% endif %}
   </div>
-  <form class="flex gap-2 mb-4" method="get" role="search">
+  <form class="flex flex-wrap items-center gap-2 mb-4" method="get" role="search">
     <input class="input w-full max-w-sm" type="search" name="q" value="{{ query }}"
            placeholder="Search by name or email" aria-label="Search candidates">
     <button class="btn btn-outline" type="submit">Search</button>
+    <label class="label ml-2">
+      <input class="toggle toggle-sm" type="checkbox" name="archived"{% if show_archived %} checked{% endif %}
+             onchange="this.form.submit()">
+      <span>Show archived</span>
+    </label>
   </form>
   <div class="card bg-base-100 shadow-sm overflow-x-auto">
     <table class="table">
@@ -27,7 +32,7 @@
       <tbody>
         {% for candidate in candidates %}
           <tr>
-            <td><a class="link" href="{% url 'ats:candidate_detail' candidate.pk %}">{{ candidate }}</a></td>
+            <td><a class="link" href="{% url 'ats:candidate_detail' candidate.pk %}">{{ candidate }}</a>{% if candidate.is_archived %} <span class="badge badge-neutral badge-sm">Archived</span>{% endif %}</td>
             <td>{{ candidate.email }}</td>
             <td>{{ candidate.phone }}</td>
             <td>{{ candidate.get_lead_source_display }}</td>

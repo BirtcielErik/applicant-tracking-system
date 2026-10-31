@@ -24,6 +24,8 @@ class SkillAdmin(admin.ModelAdmin):
 class CandidateAdmin(admin.ModelAdmin):
     list_display = ["last_name", "first_name", "email", "lead_source", "is_archived"]
     search_fields = ["first_name", "last_name", "email"]
+    # Archiving resolves applications, so it happens only in the app.
+    readonly_fields = ["is_archived"]
 
 
 @admin.register(JobOpening)

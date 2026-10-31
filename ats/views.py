@@ -63,15 +63,12 @@ def submit_application(request, form, candidate, job):
     return True
 
 
-def reopen_message(job, restored, skipped):
-    message = f"Reopened {job}."
+def restore_message(action, restored, skipped, skipped_for):
+    message = f"{action}."
     if restored:
         message += f" Restored {restored} application{pluralize(restored)}."
     if skipped:
-        message += (
-            f" Skipped {skipped} application{pluralize(skipped)} "
-            "for archived candidates."
-        )
+        message += f" Skipped {skipped} application{pluralize(skipped)} {skipped_for}."
     return message
 
 
@@ -141,7 +138,12 @@ def job_reopen(request, pk):
         except services.JobReopenRefused:
             pass  # The page below shows the job's state, which explains why.
         else:
-            messages.success(request, reopen_message(job, restored, skipped))
+            messages.success(
+                request,
+                restore_message(
+                    f"Reopened {job}", restored, skipped, "for archived candidates"
+                ),
+            )
             return redirect("ats:job_detail", pk=job.pk)
     return render(
         request,
@@ -212,11 +214,14 @@ def skill_delete(request, pk):
 
 def candidate_list(request):
     query = request.GET.get("q", "").strip()
+    show_archived = request.GET.get("archived") == "on"
     candidates = Candidate.objects.search(query)
+    if not show_archived:
+        candidates = candidates.filter(is_archived=False)
     return render(
         request,
         "ats/candidate_list.html",
-        {"candidates": candidates, "query": query},
+        {"candidates": candidates, "query": query, "show_archived": show_archived},
     )
 
 
@@ -246,6 +251,62 @@ def candidate_detail(request, pk):
 @permission_required("ats.change_candidate", raise_exception=True)
 def candidate_edit(request, pk):
     return candidate_form_response(request, get_object_or_404(Candidate, pk=pk))
+
+
+@permission_required("ats.archive_candidate", raise_exception=True)
+def candidate_archive(request, pk):
+    candidate = get_object_or_404(Candidate, pk=pk)
+    if request.method == "POST":
+        try:
+            withdrawn = services.archive_candidate(request.user, candidate)
+        except services.CandidateArchiveRefused:
+            pass  # The page below shows the candidate's state, which explains why.
+        else:
+            messages.success(
+                request,
+                f"Archived {candidate}. "
+                f"Withdrew {withdrawn} application{pluralize(withdrawn)}.",
+            )
+            return redirect("ats:candidate_detail", pk=candidate.pk)
+    return render(
+        request,
+        "ats/candidate_archive.html",
+        {
+            "candidate": candidate,
+            "offers": services.offers_blocking_archive(candidate),
+            "withdraw_count": services.applications_withdrawn_by_archive(
+                candidate
+            ).count(),
+        },
+    )
+
+
+@permission_required("ats.archive_candidate", raise_exception=True)
+def candidate_unarchive(request, pk):
+    candidate = get_object_or_404(Candidate, pk=pk)
+    if request.method == "POST":
+        try:
+            restored, skipped = services.unarchive_candidate(
+                request.user, candidate, restore="restore" in request.POST
+            )
+        except services.CandidateUnarchiveRefused:
+            pass  # The page below shows the candidate's state, which explains why.
+        else:
+            messages.success(
+                request,
+                restore_message(
+                    f"Unarchived {candidate}", restored, skipped, "for closed jobs"
+                ),
+            )
+            return redirect("ats:candidate_detail", pk=candidate.pk)
+    return render(
+        request,
+        "ats/candidate_unarchive.html",
+        {
+            "candidate": candidate,
+            "restore_count": len(services.applications_archived_out(candidate)),
+        },
+    )
 
 
 @require_POST

@@ -167,6 +167,21 @@ def test_rendered_targets_differ_by_role(request, client, job, role, stage, expe
     assert rendered_allowed_stages(response, application) == expected
 
 
+def test_only_an_archived_candidates_card_shows_the_archived_badge(
+    client, job, recruiter
+):
+    archived = make_application(job, Stage.WITHDRAWN)
+    archived.candidate.is_archived = True
+    archived.candidate.save()
+    active = make_application(job, candidate=make_candidate("Sam", "Lee"))
+    client.force_login(recruiter)
+
+    response = client.get(reverse("ats:job_detail", args=[job.pk]))
+
+    assert ">Archived</span>" in rendered_card(response, archived)
+    assert ">Archived</span>" not in rendered_card(response, active)
+
+
 def test_rejected_card_offers_only_its_previous_stage_to_a_manager(
     client, job, manager
 ):

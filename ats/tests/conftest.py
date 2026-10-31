@@ -2,6 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 
+from ats import services
 from ats.models import Application, Candidate, JobOpening
 from ats.pipeline import Stage
 
@@ -25,6 +26,19 @@ def make_application(job, stage=Stage.APPLIED, candidate=None):
     return Application.objects.create(
         candidate=candidate or make_candidate(), job=job, stage=stage
     )
+
+
+def fail_on_second_move(monkeypatch):
+    record_move = services.record_move
+    calls = []
+
+    def failing_record_move(*args):
+        calls.append(args)
+        if len(calls) == 2:
+            raise RuntimeError("Database failure")
+        record_move(*args)
+
+    monkeypatch.setattr(services, "record_move", failing_record_move)
 
 
 @pytest.fixture(autouse=True)

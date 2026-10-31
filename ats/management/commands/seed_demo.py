@@ -90,8 +90,11 @@ APPLICATIONS = [
     ("Chloe", "Data Analyst", 15, TO_FINAL_REVIEW[:2]),
     ("Dev", "Data Analyst", 18, TO_FINAL_REVIEW[:3]),
     ("Kira", "Data Analyst", 16, TO_FINAL_REVIEW[:2]),
+    # Still active here, so archiving Kira withdraws it and unarchiving restores it.
+    ("Kira", "Product Designer", 7, TO_FINAL_REVIEW[:2]),
 ]
 CLOSED_JOB_AGE = timedelta(days=2)
+ARCHIVE_AGE = timedelta(days=1)
 
 # (candidate first name, author, job title or None, days ago, body)
 NOTES = [
@@ -138,7 +141,7 @@ class Command(BaseCommand):
                 body,
             )
         self.seed_closed_job(jobs[CLOSED_JOB], manager)
-        Candidate.objects.filter(first_name=ARCHIVED_CANDIDATE).update(is_archived=True)
+        self.seed_archived_candidate(candidates[ARCHIVED_CANDIDATE], manager)
 
         names = ", ".join(name for name, _ in USERS)
         self.stdout.write(f"Demo users: {names} (password: {DEMO_PASSWORD})")
@@ -216,6 +219,14 @@ class Command(BaseCommand):
         StageChange.objects.filter(
             application__job=job, reason=StageChange.Reason.JOB_CLOSED
         ).update(changed_at=closed_at)
+
+    def seed_archived_candidate(self, candidate, user):
+        services.archive_candidate(user, candidate)
+        # changed_at is set automatically, so backdating needs a separate update.
+        StageChange.objects.filter(
+            application__candidate=candidate,
+            reason=StageChange.Reason.CANDIDATE_ARCHIVED,
+        ).update(changed_at=timezone.now() - ARCHIVE_AGE)
 
     def seed_note(self, candidate, author, job, days_ago, body):
         application = candidate.applications.get(job=job) if job else None
