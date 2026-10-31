@@ -28,6 +28,36 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-10-31 — Phase 5: candidate management with TDD
+
+### Prompts
+1. `/implement @prd/applicant-tracking-system.md @plans/applicant-tracking-system.md Implement Phase 5`
+2. Approve
+3. Approved, go ahead
+4. Approved, go ahead with cycle 2
+5. Approved, go ahead
+6. Approved, go ahead with cycle 3
+7. Approved, go ahead
+8. Approved, go ahead with the rest of Phase 5
+9. The form to create or edit a Candidate should clearly show which fields are required
+10. The search button on the Candidates page should have some kind of outline to make it clear that it is a button
+11. Manual checks pass - please update CLAUDE.md with any relevant new commands, project structure, or conventions - be as succint as possible
+
+### Summary
+- **Outcome:** Phase 5 was built and kept: candidate list with search by name or email, create and edit through `CandidateForm` in the new `ats/forms.py`, a minimal detail page, a Candidates link in the navbar, and `save_candidate` in `ats/services.py`. `Candidate` lowercases its email in both `save` and `clean`, and a duplicate in any capitalization is refused with a link to the existing record. The list and detail pages need only a login, while create and edit need the standard model permissions. Three behaviors were built with TDD (lowercase storage through the form and admin, duplicate refusal with a link, search), and the rest followed the normal process. Ruff passes, all 386 tests pass as of the last run, and the manual browser checks passed. `CLAUDE.md` gained the forms path and one line on email normalization.
+- **Deviations:**
+  - All three proposed TDD behaviors and every RED and GREEN checkpoint were approved without changes.
+  - During manual checks the user asked for required fields to be marked, which added a red `*` and a note to the form, and for an outline on the Search button.
+  - The commit uses `Implement Phase 5` from the saved feedback, not the format in the implement skill.
+  - Claude moved the `superuser` fixture into `conftest.py` so the new tests could share it, and raised it at the cycle 1 RED step.
+- **Sideways:**
+  - The cycle 1 fix let a case-variant duplicate pass validation and crash on the database constraint. Claude spotted this at cycle 1 GREEN and covered it in cycle 2, where the test sets `raise_request_exception = False` so the 500 counts as an assertion failure.
+  - The self-edit and admin duplicate tests could not be written first in a useful way. The self-edit case already passed, and the admin error has no link, so both were added after cycle 2 GREEN. Claude said so at the cycle 2 RED step.
+  - The first Ruff run failed on method order in the model and on long test lines. The first full test run had 6 failures because those new tests lacked the `db` fixture. Both were fixed before reporting.
+  - The Search button change was a single CSS class, so Claude did not re-run the tests after it.
+  - Claude did not run the pages in a browser, so the styling was first exercised during the user's manual checks, which led to the two requests above.
+  - Known limits left in place: the admin's duplicate error has no link, reversed names such as "doe jane" find nothing, SQLite only ignores case for ASCII, and simultaneous creates with one email would give a 500 while the constraint still prevents a duplicate.
+
 ## 2026-10-31 — Phase 4: drag feedback and rich cards with TDD
 
 ### Prompts

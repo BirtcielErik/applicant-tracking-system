@@ -1,0 +1,24 @@
+{% extends "ats/base.html" %}
+
+{% block title %}{{ candidate }} | Applicant Tracking System{% endblock %}
+
+{% block content %}
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold">{{ candidate }}</h1>
+    {% if perms.ats.change_candidate %}
+      <a class="btn btn-primary btn-sm" href="{% url 'ats:candidate_edit' candidate.pk %}">Edit</a>
+    {% endif %}
+  </div>
+  <div class="card bg-base-100 shadow-sm max-w-lg">
+    <dl class="card-body">
+      <dt class="font-semibold">Email</dt>
+      <dd>{{ candidate.email }}</dd>
+      <dt class="font-semibold">Phone</dt>
+      <dd>{{ candidate.phone|default:"Not provided" }}</dd>
+      <dt class="font-semibold">Lead source</dt>
+      <dd>
+        {{ candidate.get_lead_source_display }}{% if candidate.lead_source_detail %}: {{ candidate.lead_source_detail }}{% endif %}
+      </dd>
+    </dl>
+  </div>
+{% endblock %}

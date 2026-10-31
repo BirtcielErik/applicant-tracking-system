@@ -8,6 +8,12 @@ class MoveRefused(Exception):
     pass
 
 
+def save_candidate(candidate):
+    candidate.full_clean()
+    candidate.save()
+    return candidate
+
+
 @transaction.atomic
 def move_application(user, application, target):
     reason = refusal_reason(user, application, target)

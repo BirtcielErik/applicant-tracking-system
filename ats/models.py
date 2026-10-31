@@ -42,6 +42,15 @@ class Candidate(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
+    def save(self, *args, **kwargs):
+        self.email = self.email.lower()
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        # Runs before the uniqueness check, so a case variant fails validation
+        # instead of reaching the database constraint.
+        self.email = self.email.lower()
+
 
 class JobOpening(models.Model):
     class Status(models.TextChoices):

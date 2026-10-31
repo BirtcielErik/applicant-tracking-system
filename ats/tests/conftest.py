@@ -48,5 +48,10 @@ def dual_role_user(db):
 
 
 @pytest.fixture
+def superuser(db):
+    return get_user_model().objects.create_superuser("admin", password="password")
+
+
+@pytest.fixture
 def job(manager):
     return JobOpening.objects.create(title="Backend Engineer", created_by=manager)

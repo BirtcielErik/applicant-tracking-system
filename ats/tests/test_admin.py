@@ -4,11 +4,6 @@ from django.contrib.auth.models import Group
 from django.urls import reverse
 
 
-@pytest.fixture
-def superuser(db):
-    return get_user_model().objects.create_superuser("admin", password="password")
-
-
 @pytest.mark.parametrize(
     "model", ["candidate", "jobopening", "application", "stagechange"]
 )

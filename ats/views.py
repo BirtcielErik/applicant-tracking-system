@@ -1,11 +1,12 @@
 from django.contrib.auth.decorators import permission_required
-from django.db.models import Max
-from django.db.models.functions import Coalesce
-from django.shortcuts import get_object_or_404, render
+from django.db.models import Max, Q, Value
+from django.db.models.functions import Coalesce, Concat
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from . import services
-from .models import Application, JobOpening
+from .forms import CandidateForm
+from .models import Application, Candidate, JobOpening
 from .pipeline import Stage, allowed_targets
 
 
@@ -26,6 +27,17 @@ def board_context(job, user, move_error=None):
     return {"job": job, "columns": columns, "move_error": move_error}
 
 
+def candidate_form_response(request, candidate=None):
+    data = request.POST if request.method == "POST" else None
+    form = CandidateForm(data, instance=candidate)
+    if form.is_valid():
+        saved = services.save_candidate(form.save(commit=False))
+        return redirect("ats:candidate_detail", pk=saved.pk)
+    return render(
+        request, "ats/candidate_form.html", {"form": form, "candidate": candidate}
+    )
+
+
 def home(request):
     return render(request, "ats/home.html")
 
@@ -33,6 +45,33 @@ def home(request):
 def job_detail(request, pk):
     job = get_object_or_404(JobOpening, pk=pk)
     return render(request, "ats/job_detail.html", board_context(job, request.user))
+
+
+def candidate_list(request):
+    query = request.GET.get("q", "").strip()
+    candidates = Candidate.objects.annotate(
+        full_name=Concat("first_name", Value(" "), "last_name")
+    ).filter(Q(full_name__icontains=query) | Q(email__icontains=query))
+    return render(
+        request,
+        "ats/candidate_list.html",
+        {"candidates": candidates, "query": query},
+    )
+
+
+@permission_required("ats.add_candidate", raise_exception=True)
+def candidate_create(request):
+    return candidate_form_response(request)
+
+
+def candidate_detail(request, pk):
+    candidate = get_object_or_404(Candidate, pk=pk)
+    return render(request, "ats/candidate_detail.html", {"candidate": candidate})
+
+
+@permission_required("ats.change_candidate", raise_exception=True)
+def candidate_edit(request, pk):
+    return candidate_form_response(request, get_object_or_404(Candidate, pk=pk))
 
 
 @require_POST
