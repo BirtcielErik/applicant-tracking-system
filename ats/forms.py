@@ -1,5 +1,6 @@
 from django import forms
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html
 
 from .models import Candidate, JobOpening
@@ -55,3 +56,50 @@ class JobForm(DaisyFormMixin, forms.ModelForm):
         model = JobOpening
         fields = ["title", "department", "location", "description", "skills"]
         widgets = {"skills": forms.CheckboxSelectMultiple}
+
+
+class CandidateChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return f"{obj} ({obj.email})"
+
+
+class ApplicationForm(DaisyFormMixin, forms.Form):
+    application_date = forms.DateField(
+        initial=timezone.localdate,
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+    )
+
+
+class AddApplicantForm(ApplicationForm):
+    # Both forms validate against every record and only offer the valid ones, so a
+    # stale or hand-crafted choice reaches the service and gets its refusal.
+    candidate = CandidateChoiceField(
+        queryset=Candidate.objects.all(), widget=forms.HiddenInput
+    )
+
+    field_order = ["candidate", "application_date"]
+
+    def __init__(self, *args, job, query="", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.available_candidates = Candidate.objects.available_for(job).search(query)
+
+    @property
+    def selected_label(self):
+        candidate = getattr(self, "cleaned_data", {}).get("candidate")
+        if candidate is None:
+            return ""
+        return self.fields["candidate"].label_from_instance(candidate)
+
+
+class ApplyToJobForm(ApplicationForm):
+    job = forms.ModelChoiceField(queryset=JobOpening.objects.all())
+
+    field_order = ["job", "application_date"]
+
+    def __init__(self, *args, candidate, **kwargs):
+        super().__init__(*args, **kwargs)
+        available = JobOpening.objects.available_for(candidate)
+        self.fields["job"].choices = [
+            ("", self.fields["job"].empty_label),
+            *((job.pk, str(job)) for job in available),
+        ]

@@ -1,0 +1,41 @@
+{% extends "ats/base.html" %}
+{% load static %}
+
+{% block title %}{% if job %}Add applicant to {{ job }}{% else %}Apply {{ candidate }} to a job{% endif %} | Applicant Tracking System{% endblock %}
+
+{% block content %}
+  <div class="card bg-base-100 shadow-sm max-w-lg">
+    <div class="card-body">
+      <h1 class="card-title">{% if job %}Add applicant to {{ job }}{% else %}Apply {{ candidate }} to a job{% endif %}</h1>
+      <p class="text-sm opacity-60">Fields marked <span class="text-error">*</span> are required.</p>
+      {% for error in form.non_field_errors %}
+        <div class="alert alert-error" role="alert">{{ error }}</div>
+      {% endfor %}
+      <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+          {% if field.name == "candidate" %}
+            {% include "ats/partials/candidate_picker.html" %}
+          {% else %}
+            <label class="label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-error" aria-hidden="true">*</span>{% endif %}</label>
+            {{ field }}
+            {% for error in field.errors %}
+              <p class="text-error text-sm">{{ error }}</p>
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+        <div class="flex gap-2 mt-4">
+          <button class="btn btn-primary" type="submit">Save</button>
+          <a class="btn btn-ghost" href="{% if job %}{% url 'ats:job_detail' job.pk %}{% else %}{% url 'ats:candidate_detail' candidate.pk %}{% endif %}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {% if job %}
+    <script src="{% static 'ats/js/htmx.min.js' %}"></script>
+    <script src="{% static 'ats/js/candidate_picker.js' %}"></script>
+  {% endif %}
+{% endblock %}

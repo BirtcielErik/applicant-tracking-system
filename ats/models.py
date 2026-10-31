@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.db.models.functions import Lower
+from django.db.models.functions import Concat, Lower
 from django.utils import timezone
 
 from .pipeline import Stage
@@ -20,6 +20,20 @@ class User(AbstractUser):
         ]
 
 
+class CandidateQuerySet(models.QuerySet):
+    def search(self, query):
+        return self.annotate(
+            full_name=Concat("first_name", models.Value(" "), "last_name")
+        ).filter(
+            models.Q(full_name__icontains=query) | models.Q(email__icontains=query)
+        )
+
+    def available_for(self, job):
+        if job.is_closed:
+            return self.none()
+        return self.filter(is_archived=False).exclude(applications__job=job)
+
+
 class Candidate(models.Model):
     class LeadSource(models.TextChoices):
         COMPANY_WEBSITE = "company_website", "Company Website"
@@ -36,6 +50,8 @@ class Candidate(models.Model):
     is_archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = CandidateQuerySet.as_manager()
 
     class Meta:
         ordering = ["last_name", "first_name"]
@@ -70,6 +86,15 @@ class Skill(models.Model):
         return self.name
 
 
+class JobOpeningQuerySet(models.QuerySet):
+    def available_for(self, candidate):
+        if candidate.is_archived:
+            return self.none()
+        return self.filter(status=JobOpening.Status.OPEN).exclude(
+            applications__candidate=candidate
+        )
+
+
 class JobOpening(models.Model):
     class Status(models.TextChoices):
         OPEN = "open", "Open"
@@ -89,6 +114,8 @@ class JobOpening(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     closed_at = models.DateTimeField(null=True, blank=True)
+
+    objects = JobOpeningQuerySet.as_manager()
 
     class Meta:
         ordering = ["title"]

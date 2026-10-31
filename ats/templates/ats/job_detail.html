@@ -26,9 +26,14 @@
         <div class="mt-2 max-w-prose">{{ job.description|linebreaks }}</div>
       {% endif %}
     </div>
-    {% if perms.ats.change_jobopening %}
-      <a class="btn btn-primary btn-sm" href="{% url 'ats:job_edit' job.pk %}">Edit</a>
-    {% endif %}
+    <div class="flex gap-2">
+      {% if perms.ats.add_application and not job.is_closed %}
+        <a class="btn btn-primary btn-sm" href="{% url 'ats:job_application_create' job.pk %}">Add applicant</a>
+      {% endif %}
+      {% if perms.ats.change_jobopening %}
+        <a class="btn btn-primary btn-sm" href="{% url 'ats:job_edit' job.pk %}">Edit</a>
+      {% endif %}
+    </div>
   </div>
   <div id="board" data-csrf-token="{{ csrf_token }}">
     {% include "ats/partials/board.html" %}

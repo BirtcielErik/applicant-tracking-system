@@ -3,11 +3,19 @@
 {% block title %}{{ candidate }} | Applicant Tracking System{% endblock %}
 
 {% block content %}
+  {% for message in messages %}
+    <div class="alert alert-success mb-4" role="status">{{ message }}</div>
+  {% endfor %}
   <div class="flex items-center justify-between mb-4">
     <h1 class="text-2xl font-bold">{{ candidate }}</h1>
-    {% if perms.ats.change_candidate %}
-      <a class="btn btn-primary btn-sm" href="{% url 'ats:candidate_edit' candidate.pk %}">Edit</a>
-    {% endif %}
+    <div class="flex gap-2">
+      {% if perms.ats.add_application and not candidate.is_archived %}
+        <a class="btn btn-primary btn-sm" href="{% url 'ats:candidate_application_create' candidate.pk %}">Apply to job</a>
+      {% endif %}
+      {% if perms.ats.change_candidate %}
+        <a class="btn btn-primary btn-sm" href="{% url 'ats:candidate_edit' candidate.pk %}">Edit</a>
+      {% endif %}
+    </div>
   </div>
   <div class="card bg-base-100 shadow-sm max-w-lg">
     <dl class="card-body">

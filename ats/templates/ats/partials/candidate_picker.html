@@ -1,0 +1,30 @@
+<label class="label" for="candidate-search">Candidate <span class="text-error" aria-hidden="true">*</span></label>
+<div class="relative" data-candidate-picker>
+  {{ form.candidate }}
+  <input
+    class="input w-full"
+    id="candidate-search"
+    type="search"
+    placeholder="Search by name or email"
+    autocomplete="off"
+    value="{{ form.selected_label }}"
+    name="q"
+    hx-get="{% url 'ats:job_application_create' job.pk %}"
+    hx-trigger="input changed delay:200ms"
+    hx-target="#candidate-results"
+    hx-select="#candidate-results > li"
+    hx-swap="innerHTML"
+  >
+  <ul class="hidden absolute z-10 mt-1 w-full max-h-60 overflow-y-auto rounded-box bg-base-100 p-1 shadow-lg" id="candidate-results">
+    {% for candidate in form.available_candidates %}
+      <li>
+        <button class="btn btn-ghost btn-sm btn-block justify-start font-normal" type="button" data-value="{{ candidate.pk }}" data-label="{{ candidate }} ({{ candidate.email }})">{{ candidate }} ({{ candidate.email }})</button>
+      </li>
+    {% empty %}
+      <li class="p-2 text-sm opacity-60">No matching candidates</li>
+    {% endfor %}
+  </ul>
+</div>
+{% for error in form.candidate.errors %}
+  <p class="text-error text-sm">{{ error }}</p>
+{% endfor %}

@@ -1,13 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.core.exceptions import ValidationError
-from django.db.models import Count, Max, Q, Value
-from django.db.models.functions import Coalesce, Concat
+from django.db.models import Count, Max, Q
+from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from . import services
-from .forms import CandidateForm, JobForm
+from .forms import AddApplicantForm, ApplyToJobForm, CandidateForm, JobForm
 from .models import Application, Candidate, JobOpening, Skill
 from .pipeline import ACTIVE_STAGES, Stage, allowed_targets
 
@@ -51,6 +51,17 @@ def job_form_response(request, job=None):
     return render(request, "ats/job_form.html", {"form": form, "job": job})
 
 
+def submit_application(request, form, candidate, job):
+    try:
+        services.create_application(
+            request.user, candidate, job, form.cleaned_data["application_date"]
+        )
+    except services.ApplicationRefused as refusal:
+        form.add_error(None, str(refusal))
+        return False
+    return True
+
+
 def home(request):
     show_closed = request.GET.get("status") == JobOpening.Status.CLOSED
     status = JobOpening.Status.CLOSED if show_closed else JobOpening.Status.OPEN
@@ -79,6 +90,18 @@ def job_detail(request, pk):
 @permission_required("ats.change_jobopening", raise_exception=True)
 def job_edit(request, pk):
     return job_form_response(request, get_object_or_404(JobOpening, pk=pk))
+
+
+@permission_required("ats.add_application", raise_exception=True)
+def job_application_create(request, pk):
+    job = get_object_or_404(JobOpening, pk=pk)
+    data = request.POST if request.method == "POST" else None
+    form = AddApplicantForm(data, job=job, query=request.GET.get("q", "").strip())
+    if form.is_valid():
+        candidate = form.cleaned_data["candidate"]
+        if submit_application(request, form, candidate, job):
+            return redirect("ats:job_detail", pk=job.pk)
+    return render(request, "ats/application_form.html", {"form": form, "job": job})
 
 
 @require_POST
@@ -131,9 +154,7 @@ def skill_delete(request, pk):
 
 def candidate_list(request):
     query = request.GET.get("q", "").strip()
-    candidates = Candidate.objects.annotate(
-        full_name=Concat("first_name", Value(" "), "last_name")
-    ).filter(Q(full_name__icontains=query) | Q(email__icontains=query))
+    candidates = Candidate.objects.search(query)
     return render(
         request,
         "ats/candidate_list.html",
@@ -154,6 +175,21 @@ def candidate_detail(request, pk):
 @permission_required("ats.change_candidate", raise_exception=True)
 def candidate_edit(request, pk):
     return candidate_form_response(request, get_object_or_404(Candidate, pk=pk))
+
+
+@permission_required("ats.add_application", raise_exception=True)
+def candidate_application_create(request, pk):
+    candidate = get_object_or_404(Candidate, pk=pk)
+    data = request.POST if request.method == "POST" else None
+    form = ApplyToJobForm(data, candidate=candidate)
+    if form.is_valid():
+        job = form.cleaned_data["job"]
+        if submit_application(request, form, candidate, job):
+            messages.success(request, f"Applied {candidate} to {job}.")
+            return redirect("ats:candidate_detail", pk=candidate.pk)
+    return render(
+        request, "ats/application_form.html", {"form": form, "candidate": candidate}
+    )
 
 
 @require_POST

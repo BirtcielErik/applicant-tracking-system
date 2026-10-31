@@ -18,6 +18,11 @@ urlpatterns = [
     path("jobs/new/", views.job_create, name="job_create"),
     path("jobs/<int:pk>/", views.job_detail, name="job_detail"),
     path("jobs/<int:pk>/edit/", views.job_edit, name="job_edit"),
+    path(
+        "jobs/<int:pk>/applications/new/",
+        views.job_application_create,
+        name="job_application_create",
+    ),
     path("skills/", views.skill_list, name="skill_list"),
     path("skills/add/", views.skill_add, name="skill_add"),
     path("skills/<int:pk>/rename/", views.skill_rename, name="skill_rename"),
@@ -26,6 +31,11 @@ urlpatterns = [
     path("candidates/new/", views.candidate_create, name="candidate_create"),
     path("candidates/<int:pk>/", views.candidate_detail, name="candidate_detail"),
     path("candidates/<int:pk>/edit/", views.candidate_edit, name="candidate_edit"),
+    path(
+        "candidates/<int:pk>/applications/new/",
+        views.candidate_application_create,
+        name="candidate_application_create",
+    ),
     path(
         "applications/<int:pk>/move/",
         views.application_move,

@@ -28,6 +28,39 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-10-31 — Phase 8: creating applications with TDD
+
+### Prompts
+1. `/implement @prd/applicant-tracking-system.md @plans/applicant-tracking-system.md Implement Phase 8`
+2. Approve
+3. Approve
+4. Move on to behavior 2
+5. I am not seeing the diffs appear on my screen before approving
+6. yes, one edit per message
+7. Approved
+8. Move on to behavior 3
+9. Approved
+10. Go ahead
+11. The implementation of the search box and the candidate picker is clunky and unintuitive - is there a way to combine them?
+12. Manual checks pass - please update CLAUDE.md with any relevant new commands, project structure, or conventions - be as succint as possible
+
+### Summary
+- **Outcome:** Phase 8 was built and kept: `create_application` in `ats/services.py` with `ApplicationRefused`, which refuses closed jobs, archived candidates, duplicates, and future dates, and writes the initial "application created" stage change. "Add applicant" on the board uses a single searchable Candidate field, and "Apply to job" on the candidate page uses an open-job dropdown. `available_for` querysets supply the valid choices, and the candidate search moved from the view to the model. Three behaviors were built with TDD (the initial stage change, the four refusals, the reopen message for exited applications), and the rest followed the normal process. Ruff passes, all 483 tests pass, and the manual browser checks passed. `CLAUDE.md` gained one line on how application forms validate.
+- **Deviations:**
+  - All three proposed TDD behaviors and every RED and GREEN checkpoint were approved without changes.
+  - The user found the separate search box and candidate dropdown clunky at manual verification. Claude replaced them with one type-to-search field, which needed a new `candidate_picker.js` and a `candidate_picker.html` partial. "Apply to job" kept its plain dropdown.
+  - The user asked for one edit per message after the diffs failed to appear, and the rest of the session followed that.
+  - The commit uses `Implement Phase 8` from the saved feedback, not the format in the implement skill.
+  - Claude chose to have the application forms validate against all records and only offer valid ones, so a stale or hand-crafted choice gets the service's explanation instead of a generic invalid-choice error.
+  - Claude added a success message to the candidate page, because that page does not list applications until Phase 9.
+- **Sideways:**
+  - Claude sent three edits and a test run in one batch, the user could not see the diffs, and all of it was rejected, so nothing was applied. The saved feedback already said one file at a time. Claude showed the changes as text and resubmitted them one by one. The cause of the missing diffs was not confirmed.
+  - Behavior 2's duplicate case showed RED as an `IntegrityError`, not an assertion failure, which the TDD skill does not normally accept. Claude flagged this beforehand as the real bug, and the test was approved.
+  - Because the pickers exclude anyone already applied, the reopen message appears only on a stale form or a hand-crafted POST. A recruiter searching for a rejected candidate simply does not find them. Claude raised this at manual verification and left it as the plan specifies.
+  - Two simultaneous submissions for the same pair would give the second person a 500, while the database constraint still prevents a duplicate.
+  - The tests added after the TDD cycles were written against finished code, so none of them were seen failing first.
+  - Claude did not run the pages in a browser, so `candidate_picker.js` was first exercised during the user's manual checks. The picker has no arrow-key navigation.
+
 ## 2026-10-31 — Phase 7: skills with TDD
 
 ### Prompts
