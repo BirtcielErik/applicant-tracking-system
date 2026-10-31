@@ -27,6 +27,11 @@ def make_application(job, stage=Stage.APPLIED, candidate=None):
     )
 
 
+@pytest.fixture(autouse=True)
+def fast_password_hashing(settings):
+    settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+
 @pytest.fixture
 def recruiter(db):
     return make_user("recruiter", "Recruiter")

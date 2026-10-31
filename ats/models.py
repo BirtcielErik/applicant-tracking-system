@@ -68,6 +68,10 @@ class JobOpening(models.Model):
     def __str__(self):
         return self.title
 
+    @property
+    def is_closed(self):
+        return self.status == self.Status.CLOSED
+
 
 class Application(models.Model):
     candidate = models.ForeignKey(

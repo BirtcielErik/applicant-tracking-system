@@ -1,7 +1,7 @@
 from django.db import transaction
 
 from .models import StageChange
-from .pipeline import can_transition
+from .pipeline import EXIT_STAGES, refusal_reason
 
 
 class MoveRefused(Exception):
@@ -10,8 +10,9 @@ class MoveRefused(Exception):
 
 @transaction.atomic
 def move_application(user, application, target):
-    if not can_transition(user, application, target):
-        raise MoveRefused
+    reason = refusal_reason(user, application, target)
+    if reason:
+        raise MoveRefused(reason)
     from_stage = application.stage
     application.stage = target
     application.save(update_fields=["stage"])
@@ -20,5 +21,9 @@ def move_application(user, application, target):
         from_stage=from_stage,
         to_stage=target,
         changed_by=user,
-        reason=StageChange.Reason.NORMAL_MOVE,
+        reason=(
+            StageChange.Reason.APPLICATION_REOPENED
+            if from_stage in EXIT_STAGES
+            else StageChange.Reason.NORMAL_MOVE
+        ),
     )

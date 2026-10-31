@@ -31,6 +31,15 @@ def test_seed_demo_populates_every_stage_with_matching_history():
         assert application.stage_changes.first().to_stage == application.stage
 
 
+def test_seed_demo_includes_a_closed_job_and_an_archived_candidate():
+    call_command("seed_demo", verbosity=0)
+
+    closed = JobOpening.objects.get(status=JobOpening.Status.CLOSED)
+    assert closed.closed_at is not None
+    assert closed.applications.exists()
+    assert Candidate.objects.get(is_archived=True).applications.exists()
+
+
 def test_seed_demo_creates_a_user_in_each_role():
     call_command("seed_demo", verbosity=0)
 

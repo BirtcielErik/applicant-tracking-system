@@ -7,7 +7,7 @@ from .models import Application, JobOpening
 from .pipeline import Stage
 
 
-def board_context(job):
+def board_context(job, move_error=None):
     applications = job.applications.select_related("candidate")
     columns = [
         {
@@ -17,7 +17,7 @@ def board_context(job):
         }
         for stage, label in Stage.choices
     ]
-    return {"job": job, "columns": columns}
+    return {"job": job, "columns": columns, "move_error": move_error}
 
 
 def home(request):
@@ -32,9 +32,16 @@ def job_detail(request, pk):
 @require_POST
 @permission_required("ats.change_application", raise_exception=True)
 def application_move(request, pk):
-    application = get_object_or_404(Application.objects.select_related("job"), pk=pk)
+    application = get_object_or_404(
+        Application.objects.select_related("job", "candidate"), pk=pk
+    )
+    move_error = None
     try:
         services.move_application(request.user, application, request.POST.get("stage"))
-    except services.MoveRefused:
-        pass
-    return render(request, "ats/partials/board.html", board_context(application.job))
+    except services.MoveRefused as refusal:
+        move_error = str(refusal)
+    return render(
+        request,
+        "ats/partials/board.html",
+        board_context(application.job, move_error),
+    )

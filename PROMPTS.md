@@ -28,6 +28,37 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-10-31 — Phase 3: server-enforced transition rules with TDD
+
+### Prompts
+1. `/implement @prd/applicant-tracking-system.md @plans/applicant-tracking-system.md Implement Phase 3`
+2. Approve
+3. Approved, go ahead
+4. Approved, go ahead with cycle 2
+5. Approved, go ahead
+6. Approved, go ahead with cycle 3
+7. Approved, go ahead
+8. Approved, go ahead with the rest of Phase 3
+9. Can you move the toast message into a more visible spot than the top right corner?
+10. Manual checks pass - please update CLAUDE.md with any relevant new commands, project structure, or conventions - be as succint as possible
+11. The detail about the password hasher is not needed
+
+### Summary
+- **Outcome:** Phase 3 was built and kept: the complete transition table, reopens to the stage held before the exit, and the in-progress guard in `ats/pipeline.py`, with `refusal_reason` supplying each message and `can_transition` wrapping it. `move_application` records the "application reopened" reason, the move endpoint returns the board with a toast when a move is refused, and `board.js` removes the toast after 5 seconds. `seed_demo` gained a closed job, an archived candidate, and an application rejected from Offer. Three behaviors were built with TDD (the transition table by role, reopens, the in-progress guard), and the rest followed the normal process. Ruff passes, all 302 tests pass, and the manual browser checks passed. `CLAUDE.md` gained one line on `refusal_reason`.
+- **Deviations:**
+  - All three proposed TDD behaviors and every RED and GREEN checkpoint were approved without changes.
+  - The user asked for the toast to move somewhere more visible after seeing the top right position, so it moved to the top center.
+  - The user rejected a `CLAUDE.md` line about the test password hasher as unnecessary, and it was dropped.
+  - Claude added a fast password hasher for tests, which the plan did not require, and raised it at the cycle 1 RED step.
+  - Claude added `refusal_reason` and the extra seed data without being asked, the seed data so the guard could be checked in the browser.
+- **Sideways:**
+  - The first cycle 1 run took 3m45s and passed the tool's timeout because each case hashed real passwords. The fast hasher brought the whole suite down to about 3 seconds.
+  - The first test run cut off its failure details, so Claude reran two cases to confirm they failed on assertions.
+  - Refusals for reopens could not show RED because those moves were already refused, so those tests were added after GREEN. Claude said so at the cycle 2 RED step.
+  - The guard also stops moves between active stages on a closed job, which Claude flagged at cycle 3 GREEN as matching the plan.
+  - Claude did not run the JavaScript in a browser, so the snap-back and toast were first exercised during the user's manual checks.
+  - Claude left `seed_demo` for the user to run on their database because it deletes data.
+
 ## 2026-10-31 — Phase 2: drag-and-drop pipeline board with TDD for moves
 
 ### Prompts

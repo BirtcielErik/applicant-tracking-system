@@ -1,3 +1,10 @@
+{% if move_error %}
+  <div class="toast toast-top toast-center z-50" data-move-error role="alert">
+    <div class="alert alert-error">
+      <span>{{ move_error }}</span>
+    </div>
+  </div>
+{% endif %}
 <div class="flex gap-3 overflow-x-auto pb-2">
   {% for column in columns %}
     <section class="card bg-base-100 shadow-sm w-56 shrink-0">

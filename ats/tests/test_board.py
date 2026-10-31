@@ -1,8 +1,9 @@
+import pytest
 from django.contrib.staticfiles import finders
 from django.templatetags.static import static
 from django.urls import reverse
 
-from ats.models import Application, StageChange
+from ats.models import Application, JobOpening, StageChange
 from ats.pipeline import Stage
 from ats.tests.conftest import make_application, make_candidate, make_user
 
@@ -113,6 +114,125 @@ def test_refused_move_returns_board_and_changes_nothing(client, job, recruiter):
     assert "Ann Lee" in response.content.decode()
     application.refresh_from_db()
     assert application.stage == Stage.APPLIED
+    assert not StageChange.objects.exists()
+
+
+def test_refused_move_shows_a_toast_with_the_reason(client, job, recruiter):
+    application = make_application(job, Stage.FINAL_REVIEW)
+    client.force_login(recruiter)
+
+    response = post_move(client, application, Stage.OFFER)
+
+    content = response.content.decode()
+    assert "data-move-error" in content
+    assert "Only a hiring manager can make an offer." in content
+    application.refresh_from_db()
+    assert application.stage == Stage.FINAL_REVIEW
+    assert not StageChange.objects.exists()
+
+
+def test_allowed_move_shows_no_toast(client, job, recruiter):
+    application = make_application(job)
+    client.force_login(recruiter)
+
+    response = post_move(client, application, Stage.SCREENING)
+
+    assert "data-move-error" not in response.content.decode()
+
+
+def test_board_page_shows_no_toast(client, job, recruiter):
+    client.force_login(recruiter)
+
+    response = client.get(reverse("ats:job_detail", args=[job.pk]))
+
+    assert "data-move-error" not in response.content.decode()
+
+
+def test_manager_move_through_the_endpoint_records_the_change(client, job, manager):
+    application = make_application(job, Stage.FINAL_REVIEW)
+    client.force_login(manager)
+
+    response = post_move(client, application, Stage.OFFER)
+
+    assert "data-move-error" not in response.content.decode()
+    application.refresh_from_db()
+    assert application.stage == Stage.OFFER
+    assert StageChange.objects.get().to_stage == Stage.OFFER
+
+
+@pytest.mark.parametrize(
+    ("role", "stage", "target"),
+    [
+        ("recruiter", Stage.FINAL_REVIEW, Stage.OFFER),
+        ("recruiter", Stage.OFFER, Stage.HIRED),
+        ("recruiter", Stage.OFFER, Stage.FINAL_REVIEW),
+        ("recruiter", Stage.HIRED, Stage.OFFER),
+        ("recruiter", Stage.REJECTED, Stage.APPLIED),
+        ("manager", Stage.APPLIED, Stage.OFFER),
+        ("manager", Stage.SCREENING, Stage.HIRED),
+        ("manager", Stage.WITHDRAWN, Stage.HIRED),
+        ("manager", Stage.APPLIED, "not-a-stage"),
+        ("manager", Stage.APPLIED, ""),
+    ],
+)
+def test_hand_crafted_post_cannot_bypass_a_rule(
+    request, client, job, role, stage, target
+):
+    application = make_application(job, stage)
+    client.force_login(request.getfixturevalue(role))
+
+    response = post_move(client, application, target)
+
+    assert response.status_code == 200
+    assert "data-move-error" in response.content.decode()
+    application.refresh_from_db()
+    assert application.stage == stage
+    assert not StageChange.objects.exists()
+
+
+def test_move_without_a_stage_is_refused(client, job, manager):
+    application = make_application(job)
+    client.force_login(manager)
+
+    response = client.post(reverse("ats:application_move", args=[application.pk]))
+
+    assert "data-move-error" in response.content.decode()
+    assert not StageChange.objects.exists()
+
+
+def test_closed_job_refusal_explains_itself(client, job, manager):
+    application = make_application(job, Stage.INTERVIEW)
+    JobOpening.objects.filter(pk=job.pk).update(status=JobOpening.Status.CLOSED)
+    client.force_login(manager)
+
+    response = post_move(client, application, Stage.SCREENING)
+
+    assert "This job is closed" in response.content.decode()
+    application.refresh_from_db()
+    assert application.stage == Stage.INTERVIEW
+
+
+def test_archived_candidate_refusal_explains_itself(client, job, manager):
+    candidate = make_candidate()
+    candidate.is_archived = True
+    candidate.save()
+    application = make_application(job, Stage.INTERVIEW, candidate)
+    client.force_login(manager)
+
+    response = post_move(client, application, Stage.SCREENING)
+
+    assert "This candidate is archived" in response.content.decode()
+    application.refresh_from_db()
+    assert application.stage == Stage.INTERVIEW
+
+
+def test_move_to_the_current_stage_records_nothing(client, job, recruiter):
+    application = make_application(job, Stage.SCREENING)
+    client.force_login(recruiter)
+
+    response = post_move(client, application, Stage.SCREENING)
+
+    assert response.status_code == 200
     assert not StageChange.objects.exists()
 
 

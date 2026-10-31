@@ -18,7 +18,15 @@ function initBoard() {
   });
 }
 
+function dismissMoveError() {
+  const toast = document.querySelector("[data-move-error]");
+  if (toast) setTimeout(() => toast.remove(), 5000);
+}
+
 initBoard();
-document.addEventListener("htmx:afterSwap", initBoard);
+document.addEventListener("htmx:afterSwap", () => {
+  initBoard();
+  dismissMoveError();
+});
 // A failed request swaps nothing, so reload to put the dragged card back.
 document.addEventListener("htmx:responseError", () => location.reload());

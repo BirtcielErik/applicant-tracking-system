@@ -23,7 +23,9 @@ JOBS = [
     ("Backend Engineer", "Engineering", "Remote"),
     ("Product Designer", "Design", "Amarillo, TX"),
     ("Account Executive", "Sales", "Dallas, TX"),
+    ("Data Analyst", "Operations", "Remote"),
 ]
+CLOSED_JOB = "Data Analyst"
 
 LeadSource = Candidate.LeadSource
 CANDIDATES = [
@@ -37,7 +39,9 @@ CANDIDATES = [
     ("Hugo", "Martin", LeadSource.JOB_BOARD, "Indeed"),
     ("Iris", "Olsen", LeadSource.COMPANY_WEBSITE, ""),
     ("Jamal", "Wright", LeadSource.OTHER, "Conference"),
+    ("Kira", "Novak", LeadSource.JOB_BOARD, "LinkedIn"),
 ]
+ARCHIVED_CANDIDATE = "Kira"
 
 TO_FINAL_REVIEW = [
     Stage.APPLIED,
@@ -58,10 +62,14 @@ APPLICATIONS = [
     ("Grace", "Backend Engineer", 12, [Stage.APPLIED, Stage.REJECTED]),
     ("Hugo", "Backend Engineer", 11, [Stage.APPLIED, Stage.WITHDRAWN]),
     ("Iris", "Backend Engineer", 1, [Stage.APPLIED]),
+    ("Jamal", "Backend Engineer", 25, [*TO_OFFER, Stage.REJECTED]),
+    ("Kira", "Backend Engineer", 10, [*TO_FINAL_REVIEW[:2], Stage.WITHDRAWN]),
     ("Ava", "Product Designer", 6, [Stage.APPLIED, Stage.SCREENING]),
     ("Jamal", "Product Designer", 3, [Stage.APPLIED]),
     ("Ben", "Account Executive", 4, [Stage.APPLIED]),
     ("Iris", "Account Executive", 8, TO_FINAL_REVIEW[:3]),
+    ("Grace", "Data Analyst", 40, [*TO_OFFER, Stage.HIRED]),
+    ("Hugo", "Data Analyst", 35, [*TO_FINAL_REVIEW[:3], Stage.REJECTED]),
 ]
 
 
@@ -87,6 +95,10 @@ class Command(BaseCommand):
             self.seed_application(
                 candidates[first_name], jobs[title], days_ago, stages, manager
             )
+        JobOpening.objects.filter(title=CLOSED_JOB).update(
+            status=JobOpening.Status.CLOSED, closed_at=timezone.now()
+        )
+        Candidate.objects.filter(first_name=ARCHIVED_CANDIDATE).update(is_archived=True)
 
         names = ", ".join(name for name, _ in USERS)
         self.stdout.write(f"Demo users: {names} (password: {DEMO_PASSWORD})")
