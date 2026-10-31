@@ -28,6 +28,33 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-10-31 — Phase 9: candidate detail and notes with TDD
+
+### Prompts
+1. `/implement @prd/applicant-tracking-system.md @plans/applicant-tracking-system.md Implement Phase 9`
+2. Approved
+3. Continue with your proposed code - I closed that by accident
+4. Approved
+5. Move on to behavior 2
+6. Approve
+7. Move on to behavior 3
+8. Approved
+9. Go ahead
+10. Manual checks pass - please update CLAUDE.md with any relevant new commands, project structure, or conventions - be as succint as possible
+11. Do not make that change to CLAUDE.md - go ahead and move on to the next step
+
+### Summary
+- **Outcome:** Phase 9 was built and kept: the `CandidateNote` model, migrations `0007` and `0008` (staff get add and view only), the `add_note` service, `NoteForm`, the HTMX `candidate_note_add` endpoint, and the note admin. The candidate page now shows applications, notes, and a combined stage history, and `seed_demo` adds sample notes. Three behaviors were built with TDD (refusing a tag to another candidate's application, the note endpoint's fragment and error responses, the merged newest-first stage history), and the rest followed the normal process. Ruff passes, all 503 tests pass, and the manual browser checks passed.
+- **Deviations:**
+  - All three proposed TDD behaviors and every RED and GREEN checkpoint were approved without changes.
+  - The user rejected Claude's proposed `CLAUDE.md` line about notes and said to leave the file unchanged, so this phase adds nothing to it.
+  - The commit uses `Implement Phase 9` with no co-author line, from the saved feedback, not the format in the implement skill.
+  - Claude chose to keep the note form's dropdown limited to the candidate's own applications, unlike the application forms, which validate against all records. A hand-crafted POST gets Django's "Select a valid choice", and `CandidateNote.clean` still refuses it at the service and in the admin.
+- **Sideways:**
+  - Claude ran `seed_demo` on the dev database after migrating, without being asked and without checking what was there. It deletes everything except superusers, so any data the user had added by hand was lost. Claude told the user when reporting the manual verification steps.
+  - The user closed a tool prompt by accident during behavior 1, which rejected the test file and the test run. Claude resubmitted the same code when asked. Claude had sent those calls in a batch despite saying it would make one edit per message.
+  - The first full check failed Ruff on a long `urls.py` line, which the formatter fixed. Then two new tests failed because they created a candidate without the `db` fixture. Both were mistakes in the new code and were fixed before manual verification.
+
 ## 2026-10-31 — Phase 8: creating applications with TDD
 
 ### Prompts

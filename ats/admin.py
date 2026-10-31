@@ -1,7 +1,15 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import Application, Candidate, JobOpening, Skill, StageChange, User
+from .models import (
+    Application,
+    Candidate,
+    CandidateNote,
+    JobOpening,
+    Skill,
+    StageChange,
+    User,
+)
 
 admin.site.register(User, UserAdmin)
 
@@ -41,3 +49,9 @@ class StageChangeAdmin(admin.ModelAdmin):
         "reason",
     ]
     list_filter = ["reason"]
+
+
+@admin.register(CandidateNote)
+class CandidateNoteAdmin(admin.ModelAdmin):
+    list_display = ["candidate", "author", "application", "created_at"]
+    search_fields = ["candidate__first_name", "candidate__last_name", "body"]

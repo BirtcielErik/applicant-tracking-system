@@ -1,4 +1,5 @@
 {% extends "ats/base.html" %}
+{% load static %}
 
 {% block title %}{{ candidate }} | Applicant Tracking System{% endblock %}
 
@@ -29,4 +30,86 @@
       </dd>
     </dl>
   </div>
+  <section class="card bg-base-100 shadow-sm mt-4">
+    <div class="card-body">
+      <h2 class="card-title">Applications</h2>
+      <div class="overflow-x-auto">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Job</th>
+              <th>Stage</th>
+              <th>Applied</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for application in applications %}
+              <tr data-application>
+                <td><a class="link" href="{% url 'ats:job_detail' application.job.pk %}">{{ application.job }}</a></td>
+                <td>{{ application.get_stage_display }}</td>
+                <td class="whitespace-nowrap">{{ application.application_date|date:"M j, Y" }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td class="opacity-60" colspan="3">No applications yet.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  <section class="card bg-base-100 shadow-sm mt-4">
+    <div class="card-body">
+      <h2 class="card-title">Notes</h2>
+      {% if perms.ats.add_candidatenote %}
+        {% include "ats/partials/note_form.html" with note=None %}
+      {% endif %}
+      <ul id="note-list" class="flex flex-col gap-3 mt-2">
+        {% for note in notes %}
+          {% include "ats/partials/note.html" %}
+        {% endfor %}
+        <li class="hidden only:block text-sm opacity-60">No notes yet.</li>
+      </ul>
+    </div>
+  </section>
+  <section class="card bg-base-100 shadow-sm mt-4">
+    <div class="card-body">
+      <h2 class="card-title">Stage history</h2>
+      <div class="overflow-x-auto">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Job</th>
+              <th>Change</th>
+              <th>By</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for change in stage_changes %}
+              <tr data-stage-change>
+                <td class="whitespace-nowrap">{{ change.changed_at|date:"M j, Y g:i A" }}</td>
+                <td>{{ change.application.job }}</td>
+                <td>{% if change.from_stage %}{{ change.get_from_stage_display }} → {% endif %}{{ change.get_to_stage_display }}</td>
+                <td>{{ change.changed_by.get_username }}</td>
+                <td>{{ change.get_reason_display }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td class="opacity-60" colspan="5">No stage changes yet.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  {% if perms.ats.add_candidatenote %}
+    <script src="{% static 'ats/js/htmx.min.js' %}"></script>
+  {% endif %}
 {% endblock %}

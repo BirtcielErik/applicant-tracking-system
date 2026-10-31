@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.functions import Concat, Lower
 from django.utils import timezone
@@ -179,3 +180,35 @@ class StageChange(models.Model):
 
     def __str__(self):
         return f"{self.application}: {self.from_stage} to {self.to_stage}"
+
+
+class CandidateNote(models.Model):
+    candidate = models.ForeignKey(
+        Candidate, on_delete=models.CASCADE, related_name="notes"
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="candidate_notes",
+    )
+    body = models.TextField()
+    application = models.ForeignKey(
+        Application,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notes",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+
+    def __str__(self):
+        return f"Note on {self.candidate} by {self.author}"
+
+    def clean(self):
+        if self.application and self.application.candidate_id != self.candidate_id:
+            raise ValidationError(
+                {"application": "This application belongs to another candidate."}
+            )

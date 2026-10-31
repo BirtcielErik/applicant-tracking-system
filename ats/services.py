@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Application, Skill, StageChange
+from .models import Application, CandidateNote, Skill, StageChange
 from .pipeline import EXIT_STAGES, refusal_reason
 
 
@@ -50,6 +50,15 @@ def rename_skill(skill, name):
 
 def delete_skill(skill):
     skill.delete()
+
+
+def add_note(user, candidate, body, application=None):
+    note = CandidateNote(
+        candidate=candidate, author=user, body=body.strip(), application=application
+    )
+    note.full_clean()
+    note.save()
+    return note
 
 
 def application_refusal_reason(candidate, job, application_date):

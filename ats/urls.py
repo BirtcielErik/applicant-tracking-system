@@ -32,6 +32,11 @@ urlpatterns = [
     path("candidates/<int:pk>/", views.candidate_detail, name="candidate_detail"),
     path("candidates/<int:pk>/edit/", views.candidate_edit, name="candidate_edit"),
     path(
+        "candidates/<int:pk>/notes/",
+        views.candidate_note_add,
+        name="candidate_note_add",
+    ),
+    path(
         "candidates/<int:pk>/applications/new/",
         views.candidate_application_create,
         name="candidate_application_create",

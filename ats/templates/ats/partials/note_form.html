@@ -1,0 +1,23 @@
+<form id="note-form" class="flex flex-col gap-2" hx-post="{% url 'ats:candidate_note_add' candidate.pk %}" hx-target="this" hx-swap="outerHTML">
+  {% csrf_token %}
+  {% for error in form.non_field_errors %}
+    <p class="text-error text-sm">{{ error }}</p>
+  {% endfor %}
+  {% for field in form %}
+    <label class="flex flex-col gap-1">
+      <span class="text-sm font-semibold">{{ field.label }}</span>
+      {{ field }}
+    </label>
+    {% for error in field.errors %}
+      <p class="text-error text-sm">{{ error }}</p>
+    {% endfor %}
+  {% endfor %}
+  <div>
+    <button class="btn btn-primary btn-sm" type="submit">Add note</button>
+  </div>
+</form>
+{% if note %}
+  <div hx-swap-oob="afterbegin:#note-list">
+    {% include "ats/partials/note.html" %}
+  </div>
+{% endif %}

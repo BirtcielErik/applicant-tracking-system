@@ -7,8 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from . import services
-from .forms import AddApplicantForm, ApplyToJobForm, CandidateForm, JobForm
-from .models import Application, Candidate, JobOpening, Skill
+from .forms import AddApplicantForm, ApplyToJobForm, CandidateForm, JobForm, NoteForm
+from .models import Application, Candidate, JobOpening, Skill, StageChange
 from .pipeline import ACTIVE_STAGES, Stage, allowed_targets
 
 
@@ -169,12 +169,46 @@ def candidate_create(request):
 
 def candidate_detail(request, pk):
     candidate = get_object_or_404(Candidate, pk=pk)
-    return render(request, "ats/candidate_detail.html", {"candidate": candidate})
+    stage_changes = StageChange.objects.filter(
+        application__candidate=candidate
+    ).select_related("application__job", "changed_by")
+    return render(
+        request,
+        "ats/candidate_detail.html",
+        {
+            "candidate": candidate,
+            "applications": candidate.applications.select_related("job"),
+            "notes": candidate.notes.select_related("author", "application__job"),
+            "form": NoteForm(candidate=candidate),
+            "stage_changes": stage_changes,
+        },
+    )
 
 
 @permission_required("ats.change_candidate", raise_exception=True)
 def candidate_edit(request, pk):
     return candidate_form_response(request, get_object_or_404(Candidate, pk=pk))
+
+
+@require_POST
+@permission_required("ats.add_candidatenote", raise_exception=True)
+def candidate_note_add(request, pk):
+    candidate = get_object_or_404(Candidate, pk=pk)
+    form = NoteForm(request.POST, candidate=candidate)
+    note = None
+    if form.is_valid():
+        note = services.add_note(
+            request.user,
+            candidate,
+            form.cleaned_data["body"],
+            form.cleaned_data["application"],
+        )
+        form = NoteForm(candidate=candidate)
+    return render(
+        request,
+        "ats/partials/note_form.html",
+        {"form": form, "candidate": candidate, "note": note},
+    )
 
 
 @permission_required("ats.add_application", raise_exception=True)

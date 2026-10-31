@@ -9,7 +9,14 @@ from django.urls import reverse
 from django.utils import timezone
 
 from ats import services
-from ats.models import Application, Candidate, JobOpening, Skill, StageChange
+from ats.models import (
+    Application,
+    Candidate,
+    CandidateNote,
+    JobOpening,
+    Skill,
+    StageChange,
+)
 from ats.pipeline import Stage
 
 DEMO_PASSWORD = "demo-password"
@@ -80,6 +87,17 @@ APPLICATIONS = [
     ("Hugo", "Data Analyst", 35, [*TO_FINAL_REVIEW[:3], Stage.REJECTED]),
 ]
 
+# (candidate first name, author, job title or None, days ago, body)
+NOTES = [
+    ("Ava", "recruiter", None, 2, "Prefers remote work."),
+    ("Ben", "recruiter", "Backend Engineer", 3, "Phone screen went well."),
+    ("Ben", "recruiter", None, 4, "Available to start in two weeks."),
+    ("Dev", "manager", "Backend Engineer", 1, "Strong final review panel."),
+    ("Elena", "manager", "Backend Engineer", 1, "Verbal offer made."),
+    ("Jamal", "manager", "Backend Engineer", 5, "Declined the offer."),
+    ("Jamal", "recruiter", "Product Designer", 2, "Portfolio requested."),
+]
+
 
 class Command(BaseCommand):
     help = "Reset the application to the demo data. Only superusers are kept."
@@ -105,6 +123,14 @@ class Command(BaseCommand):
             self.seed_application(
                 candidates[first_name], jobs[title], days_ago, stages, manager
             )
+        for first_name, author, title, days_ago, body in NOTES:
+            self.seed_note(
+                candidates[first_name],
+                users[author],
+                jobs.get(title),
+                days_ago,
+                body,
+            )
         JobOpening.objects.filter(title=CLOSED_JOB).update(
             status=JobOpening.Status.CLOSED, closed_at=timezone.now()
         )
@@ -118,6 +144,7 @@ class Command(BaseCommand):
 
     def reset(self):
         # Children go first because their foreign keys protect the parent rows.
+        CandidateNote.objects.all().delete()
         StageChange.objects.all().delete()
         Application.objects.all().delete()
         Candidate.objects.all().delete()
@@ -176,3 +203,11 @@ class Command(BaseCommand):
         )
         # changed_at is set automatically, so backdating needs a separate update.
         StageChange.objects.filter(pk=change.pk).update(changed_at=timezone.now() - age)
+
+    def seed_note(self, candidate, author, job, days_ago, body):
+        application = candidate.applications.get(job=job) if job else None
+        note = services.add_note(author, candidate, body, application)
+        # created_at is set automatically, so backdating needs a separate update.
+        CandidateNote.objects.filter(pk=note.pk).update(
+            created_at=timezone.now() - timedelta(days=days_ago)
+        )

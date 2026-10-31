@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .models import Candidate, JobOpening
+from .models import Application, Candidate, CandidateNote, JobOpening
 
 
 class DaisyFormMixin:
@@ -49,6 +49,33 @@ class CandidateForm(DaisyFormMixin, forms.ModelForm):
                 )
             )
         return email
+
+
+class NoteApplicationChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return f"{obj.job} ({obj.get_stage_display()})"
+
+
+class NoteForm(DaisyFormMixin, forms.ModelForm):
+    application = NoteApplicationChoiceField(
+        queryset=Application.objects.none(),
+        required=False,
+        empty_label="Not tagged to an application",
+        label="Application",
+    )
+
+    class Meta:
+        model = CandidateNote
+        fields = ["body", "application"]
+        labels = {"body": "Note"}
+        widgets = {"body": forms.Textarea(attrs={"rows": 3})}
+
+    def __init__(self, *args, candidate, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance.candidate = candidate
+        self.fields["application"].queryset = candidate.applications.select_related(
+            "job"
+        )
 
 
 class JobForm(DaisyFormMixin, forms.ModelForm):

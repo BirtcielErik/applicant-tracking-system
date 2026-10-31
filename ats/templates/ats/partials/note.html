@@ -1,0 +1,10 @@
+<li class="border-b border-base-200 pb-3">
+  <div class="flex flex-wrap items-center gap-2 text-sm opacity-60">
+    <span>{{ note.author.get_username }}</span>
+    <span>{{ note.created_at|date:"M j, Y g:i A" }}</span>
+    {% if note.application %}
+      <span class="badge badge-outline badge-sm">{{ note.application.job }}</span>
+    {% endif %}
+  </div>
+  <p class="whitespace-pre-line mt-1">{{ note.body }}</p>
+</li>
