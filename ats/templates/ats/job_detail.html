@@ -4,6 +4,9 @@
 {% block title %}{{ job.title }}{% endblock %}
 
 {% block content %}
+  {% for message in messages %}
+    <div class="alert alert-success mb-4" role="status">{{ message }}</div>
+  {% endfor %}
   <div class="flex items-start justify-between mb-4">
     <div>
       <h1 class="text-2xl font-bold">{{ job.title }} <span class="badge {% if job.is_closed %}badge-error{% else %}badge-success{% endif %} align-middle">{{ job.get_status_display }}</span></h1>
@@ -32,6 +35,13 @@
       {% endif %}
       {% if perms.ats.change_jobopening %}
         <a class="btn btn-primary btn-sm" href="{% url 'ats:job_edit' job.pk %}">Edit</a>
+      {% endif %}
+      {% if perms.ats.close_reopen_job %}
+        {% if job.is_closed %}
+          <a class="btn btn-primary btn-sm" href="{% url 'ats:job_reopen' job.pk %}">Reopen job</a>
+        {% else %}
+          <a class="btn btn-error btn-sm" href="{% url 'ats:job_close' job.pk %}">Close job</a>
+        {% endif %}
       {% endif %}
     </div>
   </div>

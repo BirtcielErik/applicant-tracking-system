@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Count, Max, Q
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.defaultfilters import pluralize
 from django.views.decorators.http import require_POST
 
 from . import services
@@ -62,6 +63,18 @@ def submit_application(request, form, candidate, job):
     return True
 
 
+def reopen_message(job, restored, skipped):
+    message = f"Reopened {job}."
+    if restored:
+        message += f" Restored {restored} application{pluralize(restored)}."
+    if skipped:
+        message += (
+            f" Skipped {skipped} application{pluralize(skipped)} "
+            "for archived candidates."
+        )
+    return message
+
+
 def home(request):
     show_closed = request.GET.get("status") == JobOpening.Status.CLOSED
     status = JobOpening.Status.CLOSED if show_closed else JobOpening.Status.OPEN
@@ -90,6 +103,51 @@ def job_detail(request, pk):
 @permission_required("ats.change_jobopening", raise_exception=True)
 def job_edit(request, pk):
     return job_form_response(request, get_object_or_404(JobOpening, pk=pk))
+
+
+@permission_required("ats.close_reopen_job", raise_exception=True)
+def job_close(request, pk):
+    job = get_object_or_404(JobOpening, pk=pk)
+    if request.method == "POST":
+        try:
+            rejected = services.close_job(request.user, job)
+        except services.JobCloseRefused:
+            pass  # The page below shows the job's state, which explains why.
+        else:
+            messages.success(
+                request,
+                f"Closed {job}. Rejected {rejected} application{pluralize(rejected)}.",
+            )
+            return redirect("ats:job_detail", pk=job.pk)
+    return render(
+        request,
+        "ats/job_close.html",
+        {
+            "job": job,
+            "offers": services.offers_blocking_close(job),
+            "reject_count": services.applications_rejected_by_close(job).count(),
+        },
+    )
+
+
+@permission_required("ats.close_reopen_job", raise_exception=True)
+def job_reopen(request, pk):
+    job = get_object_or_404(JobOpening, pk=pk)
+    if request.method == "POST":
+        try:
+            restored, skipped = services.reopen_job(
+                request.user, job, restore="restore" in request.POST
+            )
+        except services.JobReopenRefused:
+            pass  # The page below shows the job's state, which explains why.
+        else:
+            messages.success(request, reopen_message(job, restored, skipped))
+            return redirect("ats:job_detail", pk=job.pk)
+    return render(
+        request,
+        "ats/job_reopen.html",
+        {"job": job, "restore_count": len(services.applications_closed_out(job))},
+    )
 
 
 @permission_required("ats.add_application", raise_exception=True)

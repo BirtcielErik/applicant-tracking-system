@@ -243,6 +243,7 @@ def test_manager_rename_is_reflected_on_affected_jobs(client, manager, job):
     )
 
     assert response.url == reverse("ats:skill_list")
+    client.get(response.url)
     detail = client.get(reverse("ats:job_detail", args=[job.pk])).content.decode()
     assert ">Python</span>" in detail
     assert "Pyhton" not in detail

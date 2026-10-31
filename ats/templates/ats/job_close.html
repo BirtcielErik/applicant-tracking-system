@@ -1,0 +1,35 @@
+{% extends "ats/base.html" %}
+
+{% block title %}Close {{ job }} | Applicant Tracking System{% endblock %}
+
+{% block content %}
+  <div class="card bg-base-100 shadow-sm max-w-lg">
+    <div class="card-body">
+      <h1 class="card-title">Close {{ job }}</h1>
+      {% if job.is_closed %}
+        <div class="alert alert-info" role="status">This job is already closed.</div>
+      {% elif offers %}
+        <div class="alert alert-error" role="alert">This job cannot be closed while applications are in Offer. Resolve these first:</div>
+        <ul class="list-disc pl-6">
+          {% for application in offers %}
+            <li><a class="link" href="{% url 'ats:candidate_detail' application.candidate_id %}">{{ application.candidate }}</a></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>Closing this job will reject <strong>{{ reject_count }}</strong> active application{{ reject_count|pluralize }}. Hired, Rejected, and Withdrawn applications are not changed, and the job will stop accepting applications.</p>
+        <form method="post">
+          {% csrf_token %}
+          <div class="flex gap-2 mt-4">
+            <button class="btn btn-error" type="submit">Close job</button>
+            <a class="btn btn-ghost" href="{% url 'ats:job_detail' job.pk %}">Cancel</a>
+          </div>
+        </form>
+      {% endif %}
+      {% if job.is_closed or offers %}
+        <div class="mt-4">
+          <a class="btn btn-ghost" href="{% url 'ats:job_detail' job.pk %}">Back to job</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

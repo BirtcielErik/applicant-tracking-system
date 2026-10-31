@@ -1,8 +1,14 @@
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Application, CandidateNote, Skill, StageChange
-from .pipeline import EXIT_STAGES, refusal_reason
+from .models import Application, CandidateNote, JobOpening, Skill, StageChange
+from .pipeline import (
+    ACTIVE_STAGES,
+    EXIT_STAGES,
+    Stage,
+    in_progress_refusal_reason,
+    refusal_reason,
+)
 
 
 class MoveRefused(Exception):
@@ -10,6 +16,16 @@ class MoveRefused(Exception):
 
 
 class ApplicationRefused(Exception):
+    pass
+
+
+class JobCloseRefused(Exception):
+    def __init__(self, message, applications=()):
+        super().__init__(message)
+        self.applications = applications
+
+
+class JobReopenRefused(Exception):
     pass
 
 
@@ -96,11 +112,7 @@ def create_application(user, candidate, job, application_date):
     return application
 
 
-@transaction.atomic
-def move_application(user, application, target):
-    reason = refusal_reason(user, application, target)
-    if reason:
-        raise MoveRefused(reason)
+def record_move(user, application, target, reason):
     from_stage = application.stage
     application.stage = target
     application.save(update_fields=["stage"])
@@ -109,9 +121,82 @@ def move_application(user, application, target):
         from_stage=from_stage,
         to_stage=target,
         changed_by=user,
-        reason=(
+        reason=reason,
+    )
+
+
+def offers_blocking_close(job):
+    return job.applications.filter(stage=Stage.OFFER).select_related("candidate")
+
+
+def applications_rejected_by_close(job):
+    return job.applications.filter(stage__in=ACTIVE_STAGES)
+
+
+def applications_closed_out(job):
+    """Return (application, change) pairs whose latest change is the close."""
+    rejected = job.applications.filter(stage=Stage.REJECTED).select_related("candidate")
+    pairs = (
+        (application, application.stage_changes.first()) for application in rejected
+    )
+    return [
+        (application, change)
+        for application, change in pairs
+        if change and change.reason == StageChange.Reason.JOB_CLOSED
+    ]
+
+
+@transaction.atomic
+def close_job(user, job):
+    if job.is_closed:
+        raise JobCloseRefused("This job is already closed.")
+    offers = offers_blocking_close(job)
+    if offers:
+        raise JobCloseRefused(
+            "This job cannot be closed while applications are in Offer.", offers
+        )
+    applications = list(applications_rejected_by_close(job))
+    for application in applications:
+        record_move(user, application, Stage.REJECTED, StageChange.Reason.JOB_CLOSED)
+    job.status = JobOpening.Status.CLOSED
+    job.closed_at = timezone.now()
+    job.save(update_fields=["status", "closed_at", "updated_at"])
+    return len(applications)
+
+
+@transaction.atomic
+def reopen_job(user, job, restore=False):
+    if not job.is_closed:
+        raise JobReopenRefused("This job is already open.")
+    job.status = JobOpening.Status.OPEN
+    job.closed_at = None
+    job.save(update_fields=["status", "closed_at", "updated_at"])
+    restored = skipped = 0
+    if not restore:
+        return restored, skipped
+    for application, change in applications_closed_out(job):
+        if in_progress_refusal_reason(application):
+            skipped += 1
+            continue
+        record_move(
+            user, application, change.from_stage, StageChange.Reason.JOB_REOPENED
+        )
+        restored += 1
+    return restored, skipped
+
+
+@transaction.atomic
+def move_application(user, application, target):
+    reason = refusal_reason(user, application, target)
+    if reason:
+        raise MoveRefused(reason)
+    record_move(
+        user,
+        application,
+        target,
+        (
             StageChange.Reason.APPLICATION_REOPENED
-            if from_stage in EXIT_STAGES
+            if application.stage in EXIT_STAGES
             else StageChange.Reason.NORMAL_MOVE
         ),
     )

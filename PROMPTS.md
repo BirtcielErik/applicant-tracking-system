@@ -28,6 +28,26 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-10-31 — Phase 10: close and reopen jobs with TDD
+
+### Prompts
+1. `/implement @prd/applicant-tracking-system.md @plans/applicant-tracking-system.md Implement Phase 10`
+2. go ahead with those three
+3. go ahead
+4. go ahead
+5. go ahead
+6. go ahead
+7. go ahead
+8. Continue
+9. I should have caught this earlier, but on the job board cards, each candidate's name should link to their candidate profile page
+10. Manual checks pass - please update CLAUDE.md with any relevant new commands, project structure, or conventions - be as succint as possible
+11. Continue with the next step
+
+### Summary
+- **Outcome:** Added manager-only close and reopen as confirmation pages, backed by `close_job` and `reopen_job`. TDD covered closing, the Offer block, and selective restore. Also refused closing a closed job and reopening an open one, made job `status` and `closed_at` read-only in the admin, and had `seed_demo` close its demo job through the real service. Candidate names on board cards now link to their profiles. All 537 tests pass, and the user confirmed the manual checks.
+- **Deviations:** The user approved all three proposed TDD behaviors. The user added the board-card name link after the build, which is outside Phase 10's stories. The user rejected the proposed CLAUDE.md edit, so that file is unchanged. Confirmation is a page, not the modal the PRD's "dialog" suggests, so counts cannot go stale after drags. `reopen_job` clears `closed_at`, which the plan did not specify.
+- **Sideways:** The first full run had three test failures, all in the tests. Two new tests used stale in-memory objects. An existing skills test broke because the job page now shows messages and the test skipped the redirect, so it now loads the skills page first. Ruff also flagged one long docstring.
+
 ## 2026-10-31 — Phase 9: candidate detail and notes with TDD
 
 ### Prompts

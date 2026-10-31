@@ -30,6 +30,8 @@ class CandidateAdmin(admin.ModelAdmin):
 class JobOpeningAdmin(admin.ModelAdmin):
     list_display = ["title", "department", "status", "created_by", "closed_at"]
     list_filter = ["status"]
+    # Closing and reopening resolve applications, so they happen only in the app.
+    readonly_fields = ["status", "closed_at"]
 
 
 @admin.register(Application)

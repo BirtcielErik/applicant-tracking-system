@@ -30,10 +30,9 @@ def refusal_reason(user, application, target):
     if target == source:
         return f"This application is already in {Stage(source).label}."
     if target in IN_PROGRESS_STAGES:
-        if application.job.is_closed:
-            return "This job is closed, so the application can only exit."
-        if application.candidate.is_archived:
-            return "This candidate is archived, so the application can only exit."
+        reason = in_progress_refusal_reason(application)
+        if reason:
+            return reason
     if source in ACTIVE_STAGES:
         return active_refusal_reason(user, source, target)
     if source == Stage.OFFER:
@@ -43,6 +42,14 @@ def refusal_reason(user, application, target):
             return "Only a hiring manager can move an application out of Hired."
         return None
     return reopen_refusal_reason(user, application, target)
+
+
+def in_progress_refusal_reason(application):
+    if application.job.is_closed:
+        return "This job is closed, so the application can only exit."
+    if application.candidate.is_archived:
+        return "This candidate is archived, so the application can only exit."
+    return None
 
 
 def active_refusal_reason(user, source, target):

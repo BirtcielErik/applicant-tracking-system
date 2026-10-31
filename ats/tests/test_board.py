@@ -214,6 +214,22 @@ def test_card_shows_candidate_and_application_details(client, job, recruiter):
     assert "Applied Jan 15, 2026" in card
 
 
+def test_card_links_the_candidates_name_to_their_profile(client, job, recruiter):
+    application = make_application(job)
+    url = reverse("ats:candidate_detail", args=[application.candidate_id])
+    client.force_login(recruiter)
+
+    page = client.get(reverse("ats:job_detail", args=[job.pk]))
+    moved = client.post(
+        reverse("ats:application_move", args=[application.pk]),
+        {"stage": Stage.SCREENING},
+    )
+
+    link = f'href="{url}">Jane Doe</a>'
+    assert link in page.content.decode()
+    assert link in moved.content.decode()
+
+
 def test_card_without_lead_source_detail_shows_only_the_source(client, job, recruiter):
     application = make_application(job)
     client.force_login(recruiter)

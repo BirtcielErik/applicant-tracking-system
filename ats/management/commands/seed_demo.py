@@ -85,7 +85,13 @@ APPLICATIONS = [
     ("Iris", "Account Executive", 8, TO_FINAL_REVIEW[:3]),
     ("Grace", "Data Analyst", 40, [*TO_OFFER, Stage.HIRED]),
     ("Hugo", "Data Analyst", 35, [*TO_FINAL_REVIEW[:3], Stage.REJECTED]),
+    # Still active here, so closing the job rejects them. Kira is archived after
+    # the close, so restoring on reopen skips her application.
+    ("Chloe", "Data Analyst", 15, TO_FINAL_REVIEW[:2]),
+    ("Dev", "Data Analyst", 18, TO_FINAL_REVIEW[:3]),
+    ("Kira", "Data Analyst", 16, TO_FINAL_REVIEW[:2]),
 ]
+CLOSED_JOB_AGE = timedelta(days=2)
 
 # (candidate first name, author, job title or None, days ago, body)
 NOTES = [
@@ -131,9 +137,7 @@ class Command(BaseCommand):
                 days_ago,
                 body,
             )
-        JobOpening.objects.filter(title=CLOSED_JOB).update(
-            status=JobOpening.Status.CLOSED, closed_at=timezone.now()
-        )
+        self.seed_closed_job(jobs[CLOSED_JOB], manager)
         Candidate.objects.filter(first_name=ARCHIVED_CANDIDATE).update(is_archived=True)
 
         names = ", ".join(name for name, _ in USERS)
@@ -203,6 +207,15 @@ class Command(BaseCommand):
         )
         # changed_at is set automatically, so backdating needs a separate update.
         StageChange.objects.filter(pk=change.pk).update(changed_at=timezone.now() - age)
+
+    def seed_closed_job(self, job, user):
+        services.close_job(user, job)
+        # Both timestamps are set automatically, so backdating needs an update.
+        closed_at = timezone.now() - CLOSED_JOB_AGE
+        JobOpening.objects.filter(pk=job.pk).update(closed_at=closed_at)
+        StageChange.objects.filter(
+            application__job=job, reason=StageChange.Reason.JOB_CLOSED
+        ).update(changed_at=closed_at)
 
     def seed_note(self, candidate, author, job, days_ago, body):
         application = candidate.applications.get(job=job) if job else None

@@ -60,6 +60,17 @@ def test_seed_demo_includes_a_closed_job_and_an_archived_candidate():
     assert Candidate.objects.get(is_archived=True).applications.exists()
 
 
+def test_seed_demo_closes_its_job_through_the_real_close():
+    call_command("seed_demo", verbosity=0)
+
+    closed = JobOpening.objects.get(status=JobOpening.Status.CLOSED)
+    closed_out = closed.applications.filter(
+        stage_changes__reason=StageChange.Reason.JOB_CLOSED
+    )
+    assert closed_out.count() == 3
+    assert closed_out.filter(candidate__is_archived=True).count() == 1
+
+
 def test_seed_demo_tags_every_job_with_skills_and_shares_them_between_jobs():
     Skill.objects.create(name="Stale")
 

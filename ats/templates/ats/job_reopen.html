@@ -1,0 +1,33 @@
+{% extends "ats/base.html" %}
+
+{% block title %}Reopen {{ job }} | Applicant Tracking System{% endblock %}
+
+{% block content %}
+  <div class="card bg-base-100 shadow-sm max-w-lg">
+    <div class="card-body">
+      <h1 class="card-title">Reopen {{ job }}</h1>
+      {% if job.is_closed %}
+        <p>Reopening this job lets it receive applications again.</p>
+        <form method="post">
+          {% csrf_token %}
+          {% if restore_count %}
+            <label class="label mt-2">
+              <input class="checkbox" type="checkbox" name="restore">
+              <span>Restore {{ restore_count }} application{{ restore_count|pluralize }} rejected by the close to {{ restore_count|pluralize:"its,their" }} previous stage{{ restore_count|pluralize }}</span>
+            </label>
+            <p class="text-sm opacity-60 mt-1">Applications for candidates archived since the close are skipped.</p>
+          {% endif %}
+          <div class="flex gap-2 mt-4">
+            <button class="btn btn-primary" type="submit">Reopen job</button>
+            <a class="btn btn-ghost" href="{% url 'ats:job_detail' job.pk %}">Cancel</a>
+          </div>
+        </form>
+      {% else %}
+        <div class="alert alert-info" role="status">This job is already open.</div>
+        <div class="mt-4">
+          <a class="btn btn-ghost" href="{% url 'ats:job_detail' job.pk %}">Back to job</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
