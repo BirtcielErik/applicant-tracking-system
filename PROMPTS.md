@@ -28,6 +28,33 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-10-31 — Phase 2: drag-and-drop pipeline board with TDD for moves
+
+### Prompts
+1. `/implement @prd/applicant-tracking-system.md @plans/applicant-tracking-system.md Implement Phase 2`
+2. Approved, go ahead with all three
+3. Approved, go ahead
+4. Approved, go ahead with cycle 2
+5. Approved, go ahead
+6. Approved, go ahead with cycle 3
+7. Approved, go ahead
+8. Approved, go ahead with the rest of Phase 2
+9. What is the correct password for manager? It is saying "demo-password" is not correct
+10. The seed command should act as a reset for the entire application
+11. Manual checks pass - please update CLAUDE.md with any relevant new commands, project structure, or conventions - be as succint as possible
+
+### Summary
+- **Outcome:** Phase 2 was built and kept: `Candidate`, `JobOpening`, `Application`, and `StageChange` with admin pages, a data migration granting their permissions to both roles, `ats/pipeline.py` with `can_transition` limited to active-to-active moves, `move_application` in `ats/services.py`, the eight-column job board, the HTMX move endpoint that always returns the full board, SortableJS drag-and-drop, and `seed_demo`. Three behaviors were built with TDD (a move saves the stage and records it, non-active moves are refused, the endpoint returns the current full board), and the rest followed the normal process. Ruff passes, all 58 tests pass, and the manual browser checks passed. `README.md`, `CLAUDE.md`, and the plan were updated.
+- **Deviations:**
+  - All three proposed TDD behaviors and every RED and GREEN checkpoint were approved without changes.
+  - The user rejected a fix that would have kept existing passwords and reported them in the `seed_demo` output, and instead asked for the command to reset the whole application. The plan's demo data decision was changed and marked **Resolved**. Claude chose to keep superusers so admin access survives a reset.
+  - HTMX was saved as a project static file alongside SortableJS, which the plan did not require.
+- **Sideways:**
+  - `seed_demo` first set passwords only on accounts it created, but printed `demo-password` for all of them. `manager` and `dual` already existed from Phase 1, so their demo login failed during manual checks. A read-only query confirmed the cause, and the reset removed the problem.
+  - The Django Admin requirement had no test after the first full run. Claude noticed this before reporting and added one.
+  - Claude did not run the JavaScript in a browser, so drag-and-drop was first exercised during the user's manual checks.
+  - Claude left the reset for the user to run on their database because it deletes data, including the Phase 1 `staff` account.
+
 ## 2026-10-31 — Phase 1: authenticated shell with TDD for roles and login
 
 ### Prompts

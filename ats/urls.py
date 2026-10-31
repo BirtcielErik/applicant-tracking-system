@@ -15,4 +15,10 @@ urlpatterns = [
     ),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("", views.home, name="home"),
+    path("jobs/<int:pk>/", views.job_detail, name="job_detail"),
+    path(
+        "applications/<int:pk>/move/",
+        views.application_move,
+        name="application_move",
+    ),
 ]

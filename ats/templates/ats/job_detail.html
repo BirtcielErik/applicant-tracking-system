@@ -1,0 +1,17 @@
+{% extends "ats/base.html" %}
+{% load static %}
+
+{% block title %}{{ job.title }}{% endblock %}
+
+{% block content %}
+  <h1 class="text-2xl font-bold mb-4">{{ job.title }}</h1>
+  <div id="board" data-csrf-token="{{ csrf_token }}">
+    {% include "ats/partials/board.html" %}
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{% static 'ats/js/htmx.min.js' %}"></script>
+  <script src="{% static 'ats/js/Sortable.min.js' %}"></script>
+  <script src="{% static 'ats/js/board.js' %}"></script>
+{% endblock %}

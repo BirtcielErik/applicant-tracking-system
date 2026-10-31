@@ -25,6 +25,22 @@ def test_migrations_create_roles_and_manager_only_permissions():
     )
 
 
+def test_recruiter_can_work_with_pipeline_models_but_not_delete(recruiter):
+    assert recruiter.has_perms(
+        [
+            "ats.add_candidate",
+            "ats.change_candidate",
+            "ats.add_jobopening",
+            "ats.change_jobopening",
+            "ats.add_application",
+            "ats.change_application",
+            "ats.view_stagechange",
+        ]
+    )
+    assert not recruiter.has_perm("ats.delete_candidate")
+    assert not recruiter.has_perm("ats.change_stagechange")
+
+
 def test_role_permissions_combine(recruiter, manager, dual_role_user):
     manager_only = {f"ats.{codename}" for codename in MANAGER_ONLY_CODENAMES}
     recruiter_perms = recruiter.get_all_permissions()

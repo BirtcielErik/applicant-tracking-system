@@ -27,6 +27,14 @@ This starts Django and rebuilds the CSS when templates change. The app is at <ht
 
 There is no signup page. Sign in to <http://127.0.0.1:8000/admin/> as the superuser to create staff accounts, then add each one to the Recruiter group, the Hiring Manager group, or both.
 
+## Demo data
+
+```sh
+uv run python manage.py seed_demo
+```
+
+This resets the application: it deletes every job, candidate, application, stage change, and non-superuser account, then creates the users `recruiter`, `manager`, and `dual` (password `demo-password`), plus jobs, candidates, and applications across every stage. Superusers are kept. It prints each job's board URL and can be run repeatedly.
+
 ## Tests and linting
 
 ```sh

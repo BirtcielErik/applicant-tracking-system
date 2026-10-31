@@ -23,11 +23,13 @@ An internal, staff-only Django web application for hiring teams to manage job op
 - Roles are Django groups created by data migration. Accounts and group membership are managed only in Django Admin.
 - `LoginRequiredMiddleware` protects every view by default.
 - URLs are named, namespaced under `ats`, and use integer pks.
+- Group permissions for new models are granted by data migration.
 
 ## Development
 
-- Layout: `config/` is the project, `ats/` is the app, and `tailwind/source.css` is the Tailwind source.
+- Layout: `config/` is the project, `ats/` is the app, and `tailwind/source.css` is the Tailwind source. Rules are in `ats/pipeline.py`, services in `ats/services.py`, HTMX fragments in `ats/templates/ats/partials/`, and JS (including vendored HTMX and SortableJS) in `ats/static/ats/js/`.
 - Run: `uv run python manage.py tailwind runserver`
+- Reset to demo data: `uv run python manage.py seed_demo`. This deletes everything except superusers; demo users' password is `demo-password`.
 - Check: `uv run ruff check .`, `uv run ruff format .`, and `uv run pytest`
 - Shared test fixtures are in `ats/tests/conftest.py`.
 

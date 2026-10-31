@@ -9,6 +9,16 @@ def superuser(db):
     return get_user_model().objects.create_superuser("admin", password="password")
 
 
+@pytest.mark.parametrize(
+    "model", ["candidate", "jobopening", "application", "stagechange"]
+)
+def test_admin_can_open_pipeline_model_pages(client, superuser, model):
+    client.force_login(superuser)
+
+    assert client.get(reverse(f"admin:ats_{model}_changelist")).status_code == 200
+    assert client.get(reverse(f"admin:ats_{model}_add")).status_code == 200
+
+
 def test_admin_login_is_reachable_while_signed_out(client):
     assert client.get(reverse("admin:login")).status_code == 200
 

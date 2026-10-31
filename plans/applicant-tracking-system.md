@@ -69,7 +69,7 @@ Durable decisions that apply across all phases. Where this section resolves a co
   - Manager-only actions are checked on the server and hidden in the UI.
 - **Pipeline move contract**: a drop sends an HTMX POST with the target stage. The server runs the rule check and, if allowed, saves the stage and writes the stage change. The response is always the full re-rendered board, with an error toast added for a blocked move.
 - **Testing**: pytest with shared fixtures in a conftest plus small helpers, no factory library, no browser tests. Most tests target rules and services, with view tests using Django's test client. Ruff lints and formats the codebase.
-- **Demo data**: `seed_demo` is introduced in Phase 2 and extended by each later phase that adds data worth demonstrating. Running it repeatedly must not fail or create duplicates.
+- **Demo data**: `seed_demo` is introduced in Phase 2 and extended by each later phase that adds data worth demonstrating. **Resolved**: it resets the application, deleting all data and non-superuser accounts before loading the demo set, so running it repeatedly must not fail or create duplicates.
 
 ---
 
