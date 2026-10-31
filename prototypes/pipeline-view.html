@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en" data-theme="corporate">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipeline View Options</title>
+<!-- PROTOTYPE: throwaway comparison for grill-me Question 11. Not production code.
+     Tailwind + DaisyUI via CDN stand in for django-tailwind-cli; plain JS stands in for HTMX requests. -->
+<link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.5"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<style>
+  body { padding-bottom: 90px; }
+  .col-dim { opacity: .35; }
+  .col-ok { outline: 2px dashed oklch(var(--su)); outline-offset: -2px; }
+  .sortable-ghost { opacity: .4; }
+  .flash { animation: flash 1.2s ease-out; }
+  @keyframes flash { from { box-shadow: 0 0 0 3px oklch(var(--p)); } to { box-shadow: 0 0 0 0 transparent; } }
+  /* Prototype switcher: deliberately NOT DaisyUI so it reads as separate from the design */
+  #switcher { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 50;
+    background: #111; color: #eee; font: 13px/1.4 ui-monospace, Consolas, monospace; border-radius: 10px;
+    padding: 8px 10px; display: flex; gap: 8px; align-items: center; box-shadow: 0 6px 24px rgba(0,0,0,.35);
+    max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center; }
+  #switcher button { background: #2a2a2a; color: #eee; border: 1px solid #444; border-radius: 6px; padding: 4px 10px; cursor: pointer; font: inherit; }
+  #switcher button:hover { border-color: #888; }
+  #state { position: fixed; right: 16px; bottom: 76px; z-index: 50; width: min(380px, calc(100vw - 32px));
+    max-height: 50vh; overflow: auto; background: #111; color: #ddd; font: 12px/1.5 ui-monospace, Consolas, monospace;
+    border-radius: 10px; padding: 12px; display: none; }
+  #state.open { display: block; }
+  #state .ok { color: #8ce99a; } #state .bad { color: #ff8787; }
+</style>
+</head>
+<body class="bg-base-200 min-h-screen">
+
+<!-- Shared app shell (same in every variant; not what's being compared) -->
+<div class="navbar bg-base-100 shadow-sm px-4">
+  <div class="flex-1 gap-2">
+    <span class="font-bold text-lg">ATS</span>
+    <span class="hidden sm:inline text-sm opacity-60">Jobs / Junior Software Developer / Pipeline</span>
+  </div>
+  <div class="flex-none">
+    <div class="join" id="roles"></div>
+  </div>
+</div>
+
+<main class="p-4 max-w-[1400px] mx-auto">
+  <div class="flex flex-wrap items-end justify-between gap-2 mb-4">
+    <div>
+      <h1 class="text-2xl font-bold">Junior Software Developer</h1>
+      <p class="text-sm opacity-70">Amarillo, TX · Engineering · <span class="badge badge-success badge-sm">Open</span></p>
+    </div>
+    <p class="text-sm opacity-70" id="variant-hint"></p>
+  </div>
+  <div id="view"></div>
+</main>
+
+<div class="toast toast-top toast-end z-40" id="toasts"></div>
+
+<div id="state"></div>
+<div id="switcher">
+  <button id="prev" title="Previous (←)">←</button>
+  <span id="label"></span>
+  <button id="next" title="Next (→)">→</button>
+  <button id="toggle-state">State</button>
+  <button id="reset">Reset data</button>
+</div>
+
+<script>
+// ---------- Shared rules (final rules from Questions 6 / 6b) ----------
+const LABEL = { APPLIED:'Applied', SCREENING:'Screening', INTERVIEW:'Interview', FINAL_REVIEW:'Final Review',
+  OFFER:'Offer', HIRED:'Hired', REJECTED:'Rejected', WITHDRAWN:'Withdrawn' };
+const MAIN = ['APPLIED','SCREENING','INTERVIEW','FINAL_REVIEW','OFFER','HIRED'];
+const EXITS = ['REJECTED','WITHDRAWN'];
+const ALL = [...MAIN, ...EXITS];
+const ACTIVE = MAIN.slice(0, 4);
+const R = 'RECRUITER', M = 'MANAGER';
+const ROLE = { RECRUITER:'Recruiter', MANAGER:'Hiring Manager' };
+const ok = (why) => ({ ok:true, why }), no = (why) => ({ ok:false, why });
+
+function canMove(app, role, to) {
+  const from = app.stage;
+  if (to === 'REOPEN') {
+    if (!EXITS.includes(from)) return no('Only Rejected or Withdrawn applications can be reopened.');
+    return role === M ? ok(`Reopened back to ${LABEL[app.before]}.`) : no('Only a Hiring Manager can reopen an application.');
+  }
+  if (to === from) return no(`Already in ${LABEL[from]}.`);
+  if (EXITS.includes(from)) return no(`${LABEL[from]} is closed. A Hiring Manager must reopen it (back to ${LABEL[app.before]}).`);
+  if (from === 'HIRED') return role === M ? ok('Hiring Manager moved someone out of Hired.') : no('Only a Hiring Manager can move someone out of Hired.');
+  if (EXITS.includes(to)) return ok(`Anyone can move an application to ${LABEL[to]}.`);
+  if (from === 'OFFER') return role === M ? ok('Hiring Manager changed an Offer.') : no('Only a Hiring Manager can move an Offer (except to Rejected/Withdrawn).');
+  if (to === 'HIRED') return no('Hired can only be reached from Offer.');
+  if (to === 'OFFER') {
+    if (from !== 'FINAL_REVIEW') return no('Offers can only be made from Final Review.');
+    return role === M ? ok('Hiring Manager made an offer.') : no('Only a Hiring Manager can make an offer.');
+  }
+  return ok('Active stages can move forward or back freely.');
+}
+
+function allowedTargets(app, role) {
+  const list = ALL.filter((to) => canMove(app, role, to).ok).map((to) => ({ to, label: `Move to ${LABEL[to]}` }));
+  if (canMove(app, role, 'REOPEN').ok) list.unshift({ to:'REOPEN', label:`Reopen (back to ${LABEL[app.before]})` });
+  return list;
+}
+
+// ---------- In-memory data ----------
+function seed() {
+  return [
+    ['Maya Chen','WEBSITE','',2,'APPLIED'], ['Luis Ortega','JOB_BOARD','Indeed',3,'APPLIED'],
+    ['Priya Nair','REFERRAL','Referred by Dana Kim',1,'APPLIED'], ['Jordan Blake','WEBSITE','',8,'SCREENING'],
+    ['Sam Whitfield','OTHER','WTAMU career fair',10,'SCREENING'], ['Aisha Karim','REFERRAL','Referred by Tom Hale',14,'INTERVIEW'],
+    ['Tom Reyes','JOB_BOARD','LinkedIn',15,'INTERVIEW'], ['Hannah Moore','WEBSITE','',21,'FINAL_REVIEW'],
+    ['Diego Alvarez','REFERRAL','Referred by Dana Kim',25,'OFFER'], ['Grace Liu','JOB_BOARD','Indeed',40,'HIRED'],
+    ['Ben Carter','WEBSITE','',12,'REJECTED','SCREENING'], ['Olivia Park','JOB_BOARD','Indeed',18,'WITHDRAWN','INTERVIEW'],
+  ].map(([name, src, detail, days, stage, before], i) => ({
+    id: i + 1, name, email: name.toLowerCase().replace(' ', '.') + '@example.com',
+    src, detail, days, stage, before: before || null, moved: days,
+  }));
+}
+const SRC = { WEBSITE:'Website', JOB_BOARD:'Job board', REFERRAL:'Referral', OTHER:'Other' };
+
+let apps = seed(), role = R, history = [], last = null, flashId = null;
+
+function move(id, to) {
+  const app = apps.find((a) => a.id === id);
+  const res = canMove(app, role, to);
+  const from = app.stage;
+  if (res.ok) {
+    const dest = to === 'REOPEN' ? app.before : to;
+    app.before = EXITS.includes(dest) ? from : null;
+    app.stage = dest; app.moved = 0; flashId = id;
+    history.unshift(`${ROLE[role]}: ${app.name} ${LABEL[from]} → ${LABEL[dest]}${to === 'REOPEN' ? ' (reopen)' : ''}`);
+  }
+  last = { ok: res.ok, msg: `${app.name}: ${res.why}` };
+  toast(res.ok ? 'success' : 'error', last.msg);
+  render();
+}
+
+// ---------- Helpers ----------
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const ago = (d) => d === 0 ? 'just now' : `${d}d ago`;
+const inStage = (s) => apps.filter((a) => a.stage === s);
+const stageBadge = (s) => {
+  const cls = { OFFER:'badge-warning', HIRED:'badge-success', REJECTED:'badge-error', WITHDRAWN:'badge-ghost' }[s] || 'badge-info';
+  return `<span class="badge ${cls} badge-sm whitespace-nowrap">${LABEL[s]}</span>`;
+};
+function moveSelect(app, size = 'select-xs') {
+  const opts = allowedTargets(app, role);
+  if (!opts.length) return `<span class="text-xs opacity-50">No moves for ${ROLE[role]}</span>`;
+  return `<select class="select select-bordered ${size} w-full" data-app="${app.id}">
+    <option value="" selected>Move to…</option>${opts.map((o) => `<option value="${o.to}">${o.label}</option>`).join('')}
+  </select>`;
+}
+function toast(kind, msg) {
+  const el = document.createElement('div');
+  el.className = `alert alert-${kind} text-sm max-w-sm`;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ---------- Variant A: Kanban + "Move to…" menu ----------
+let exitsOpen = { REJECTED:false, WITHDRAWN:false };
+function card(app, extra = '') {
+  return `<div class="card card-compact bg-base-100 shadow-sm ${app.id === flashId ? 'flash' : ''} ${extra}" data-id="${app.id}">
+    <div class="card-body gap-1">
+      <div class="font-semibold">${esc(app.name)}</div>
+      <div class="flex flex-wrap gap-1 items-center text-xs opacity-70">
+        <span class="badge badge-outline badge-xs">${SRC[app.src]}</span><span>applied ${ago(app.days)}</span>
+      </div>
+      ${extra.includes('drag') ? '' : `<div class="mt-1">${moveSelect(app)}</div>`}
+    </div></div>`;
+}
+function renderA() {
+  const col = (s) => `<div class="w-64 shrink-0 bg-base-300/50 rounded-box p-2 flex flex-col gap-2">
+      <div class="flex justify-between items-center px-1"><span class="font-semibold text-sm">${LABEL[s]}</span>
+        <span class="badge badge-sm">${inStage(s).length}</span></div>
+      ${inStage(s).map((a) => card(a)).join('') || '<div class="text-xs opacity-50 px-1 py-4 text-center">Empty</div>'}
+    </div>`;
+  const exitCol = (s) => exitsOpen[s] ? `<div class="w-64 shrink-0 bg-base-300/30 rounded-box p-2 flex flex-col gap-2">
+      <button class="flex justify-between items-center px-1 text-left" data-toggle-exit="${s}">
+        <span class="font-semibold text-sm">${LABEL[s]} ▾</span><span class="badge badge-sm">${inStage(s).length}</span></button>
+      ${inStage(s).map((a) => card(a)).join('') || '<div class="text-xs opacity-50 text-center py-4">Empty</div>'}
+    </div>`
+    : `<button class="w-14 shrink-0 bg-base-300/30 rounded-box p-2 flex flex-col items-center gap-2" data-toggle-exit="${s}" title="Expand ${LABEL[s]}">
+        <span class="badge badge-sm">${inStage(s).length}</span>
+        <span class="text-xs font-semibold [writing-mode:vertical-rl]">${LABEL[s]} ▸</span></button>`;
+  return `<div class="flex gap-3 overflow-x-auto pb-3 items-start">
+    ${MAIN.map(col).join('')}<div class="divider divider-horizontal mx-0"></div>${EXITS.map(exitCol).join('')}</div>`;
+}
+
+// ---------- Variant B: drag-and-drop Kanban ----------
+function renderB() {
+  const col = (s, narrow) => `<div class="${narrow ? 'w-52' : 'w-60'} shrink-0 bg-base-300/50 rounded-box p-2 flex flex-col" data-col="${s}">
+      <div class="flex justify-between items-center px-1 mb-2"><span class="font-semibold text-sm">${LABEL[s]}</span>
+        <span class="badge badge-sm">${inStage(s).length}</span></div>
+      <div class="flex flex-col gap-2 min-h-24" data-drop="${s}">${inStage(s).map((a) => card(a, 'drag cursor-grab')).join('')}</div>
+    </div>`;
+  return `<div class="flex gap-3 overflow-x-auto pb-3 items-stretch">
+    ${MAIN.map((s) => col(s)).join('')}<div class="divider divider-horizontal mx-0"></div>${EXITS.map((s) => col(s, true)).join('')}</div>`;
+}
+function wireB() {
+  document.querySelectorAll('[data-drop]').forEach((el) => Sortable.create(el, {
+    group: 'pipeline', animation: 120, delay: 100, delayOnTouchOnly: true,
+    onStart(evt) {
+      const app = apps.find((a) => a.id === +evt.item.dataset.id);
+      document.querySelectorAll('[data-col]').forEach((c) => {
+        const s = c.dataset.col;
+        if (s === app.stage) return;
+        const target = EXITS.includes(app.stage) && s === app.before ? 'REOPEN' : s;
+        c.classList.add(canMove(app, role, target).ok ? 'col-ok' : 'col-dim');
+      });
+    },
+    onEnd(evt) {
+      const id = +evt.item.dataset.id, to = evt.to.dataset.drop, app = apps.find((a) => a.id === id);
+      if (to === app.stage) return render();
+      move(id, EXITS.includes(app.stage) && to === app.before ? 'REOPEN' : to); // illegal → re-render snaps it back
+    },
+  }));
+}
+
+// ---------- Variant C: table ----------
+let filter = 'ACTIVE';
+function renderC() {
+  const rows = apps
+    .filter((a) => filter === 'ALL' || (filter === 'ACTIVE' ? !EXITS.includes(a.stage) : EXITS.includes(a.stage)))
+    .sort((a, b) => ALL.indexOf(a.stage) - ALL.indexOf(b.stage) || a.days - b.days);
+  const tab = (k, t) => `<a role="tab" class="tab ${filter === k ? 'tab-active' : ''}" data-filter="${k}">${t}</a>`;
+  return `<div class="bg-base-100 rounded-box shadow-sm">
+    <div class="flex flex-wrap justify-between items-center gap-2 p-3 border-b border-base-200">
+      <div role="tablist" class="tabs tabs-boxed tabs-sm">${tab('ACTIVE','In progress')}${tab('CLOSED','Rejected / Withdrawn')}${tab('ALL','All')}</div>
+      <span class="text-sm opacity-60">${rows.length} application(s)</span>
+    </div>
+    <div class="overflow-x-auto"><table class="table table-sm">
+      <thead><tr><th>Candidate</th><th>Lead source</th><th>Applied</th><th>Stage</th><th>Last moved</th><th class="w-52">Change stage</th></tr></thead>
+      <tbody>${rows.map((a) => `<tr class="${a.id === flashId ? 'flash' : ''}">
+        <td><div class="font-semibold">${esc(a.name)}</div><div class="text-xs opacity-60">${a.email}</div></td>
+        <td class="text-sm">${SRC[a.src]}${a.detail ? `<div class="text-xs opacity-60">${esc(a.detail)}</div>` : ''}</td>
+        <td class="text-sm whitespace-nowrap">${ago(a.days)}</td>
+        <td>${stageBadge(a.stage)}</td>
+        <td class="text-sm whitespace-nowrap">${ago(a.moved)}</td>
+        <td>${moveSelect(a, 'select-sm')}</td></tr>`).join('')
+        || '<tr><td colspan="6" class="text-center opacity-50 py-6">Nothing here</td></tr>'}</tbody>
+    </table></div></div>`;
+}
+
+// ---------- Switcher + render ----------
+const VARIANTS = [
+  { key:'A', name:'Kanban + move menu', hint:'Pick a move from the menu on any card. It only lists moves your role is allowed to make.', render: renderA },
+  { key:'B', name:'Drag-and-drop Kanban', hint:'Drag a card to another column. Green outline = allowed, faded = blocked. Illegal drops snap back.', render: renderB, wire: wireB },
+  { key:'C', name:'Table view', hint:'One row per application. Change the stage from the menu at the end of each row.', render: renderC },
+];
+let vi = 0;
+try { vi = Math.max(0, VARIANTS.findIndex((v) => v.key === localStorage.getItem('pipeline-variant'))); } catch (e) {}
+
+function render() {
+  const v = VARIANTS[vi];
+  document.getElementById('label').textContent = `${v.key} · ${v.name} (${vi + 1}/${VARIANTS.length})`;
+  document.getElementById('variant-hint').textContent = v.hint;
+  document.getElementById('roles').innerHTML = [R, M].map((r) =>
+    `<button class="btn btn-sm join-item ${r === role ? 'btn-primary' : ''}" data-role="${r}">${ROLE[r]}</button>`).join('');
+  document.getElementById('view').innerHTML = v.render();
+  if (v.wire) v.wire();
+  flashId = null;
+  const counts = ALL.map((s) => `${LABEL[s]}: ${inStage(s).length}`).join(' · ');
+  document.getElementById('state').innerHTML =
+    `<div><b>Variant:</b> ${v.key} · ${v.name}</div><div><b>Acting as:</b> ${ROLE[role]}</div>
+     <div style="margin-top:6px"><b>Last action:</b> ${last ? `<span class="${last.ok ? 'ok' : 'bad'}">${last.ok ? 'ALLOWED' : 'BLOCKED'}</span> ${esc(last.msg)}` : 'none'}</div>
+     <div style="margin-top:6px"><b>Counts:</b> ${counts}</div>
+     <div style="margin-top:6px"><b>Stage history (newest first):</b></div>
+     ${history.length ? history.map((h) => `<div>• ${esc(h)}</div>`).join('') : '<div>none yet</div>'}`;
+}
+function go(d) {
+  vi = (vi + d + VARIANTS.length) % VARIANTS.length;
+  try { localStorage.setItem('pipeline-variant', VARIANTS[vi].key); } catch (e) {}
+  render();
+}
+
+document.getElementById('prev').onclick = () => go(-1);
+document.getElementById('next').onclick = () => go(1);
+document.getElementById('toggle-state').onclick = () => document.getElementById('state').classList.toggle('open');
+document.getElementById('reset').onclick = () => { apps = seed(); history = []; last = null; render(); };
+document.addEventListener('keydown', (e) => {
+  if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if (e.key === 'ArrowLeft') go(-1);
+  if (e.key === 'ArrowRight') go(1);
+});
+document.addEventListener('change', (e) => {
+  const id = e.target.dataset.app;
+  if (id && e.target.value) move(+id, e.target.value);
+});
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-role],[data-toggle-exit],[data-filter]');
+  if (!t) return;
+  if (t.dataset.role) { role = t.dataset.role; render(); }
+  if (t.dataset.toggleExit) { exitsOpen[t.dataset.toggleExit] = !exitsOpen[t.dataset.toggleExit]; render(); }
+  if (t.dataset.filter) { filter = t.dataset.filter; render(); }
+});
+
+render();
+</script>
+</body>
+</html>

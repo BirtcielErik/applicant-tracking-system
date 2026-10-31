@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stage Transition Rules</title>
+<!-- PROTOTYPE: throwaway demo for grill-me Question 6 (Option C). Not production code. -->
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e3e3e0;
+    --accent: #3b5bdb; --accent-soft: #e7ecff; --ok: #2b8a3e; --ok-soft: #e6f4ea; --bad: #c92a2a; --bad-soft: #fdecec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161618; --panel: #1f1f22; --text: #ececee; --muted: #9a9aa2; --line: #333338;
+      --accent: #7c95ff; --accent-soft: #262d4a; --ok: #69db7c; --ok-soft: #1f3326; --bad: #ff8787; --bad-soft: #3a2224; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  p.lead { color: var(--muted); margin: 0 0 8px; max-width: 760px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-top: 20px; }
+  .rules { margin: 8px 0 0; padding-left: 20px; color: var(--muted); font-size: 14px; }
+  .pipeline { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  .chip.current { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .arrow { color: var(--muted); font-size: 12px; }
+  .sep { width: 1px; height: 22px; background: var(--line); margin: 0 8px; }
+  .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
+  .field .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .field .v { font-weight: 600; }
+  .result { margin-top: 16px; padding: 12px 14px; border-radius: 8px; font-size: 14px; }
+  .result.ok { background: var(--ok-soft); color: var(--ok); }
+  .result.bad { background: var(--bad-soft); color: var(--bad); }
+  .result.idle { background: var(--accent-soft); color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); padding: 7px 12px; }
+  button:hover { border-color: var(--accent); }
+  button:disabled { cursor: default; opacity: .45; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .role-toggle button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .move.allowed { border-color: var(--ok); }
+  .move.blocked { border-style: dashed; color: var(--muted); }
+  .tag { font-size: 11px; margin-left: 6px; }
+  .move.allowed .tag { color: var(--ok); }
+  .move.blocked .tag { color: var(--bad); }
+  .legend { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+  .tabs button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .scenario-desc { margin: 14px 0; color: var(--muted); max-width: 760px; }
+  .scenario-desc strong { color: var(--text); }
+  ol.steps { padding-left: 0; list-style: none; margin: 0; display: grid; gap: 8px; }
+  ol.steps li { display: flex; gap: 10px; align-items: center; }
+  ol.steps .num { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; background: var(--line); flex: none; }
+  ol.steps li.done .num { background: var(--ok); color: #fff; }
+  ol.steps li.next .num { background: var(--accent); color: #fff; }
+  ol.steps li .expect { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Stage transition rules: try them out</h1>
+  <p class="lead"><strong>The question:</strong> Do the proposed pipeline rules (Option C) feel right? Can recruiters and hiring managers move an application where they need to, while the system blocks moves that make no sense?</p>
+  <ul class="rules">
+    <li>Applied, Screening, Interview, and Final Review are <em>active</em>. From an active stage you can jump <strong>forward any number of steps</strong>, or go <strong>back exactly one step</strong>.</li>
+    <li>Final Review → Offer and Offer → Hired are <strong>Hiring Manager only</strong>.</li>
+    <li>Anyone can move an active or Offer application to <strong>Rejected</strong> or <strong>Withdrawn</strong>.</li>
+    <li>Hired, Rejected, and Withdrawn are <em>closed outcomes</em>. Only a Hiring Manager can <strong>reopen</strong> Rejected or Withdrawn, which returns the application to the stage it was in before. <strong>Hired is permanent.</strong></li>
+  </ul>
+
+  <section>
+    <h2>Current application</h2>
+    <div id="pipeline" class="pipeline"></div>
+    <div id="fields" class="fields"></div>
+    <div id="result" class="result idle"></div>
+    <table>
+      <thead><tr><th>#</th><th>From</th><th>To</th><th>Done by</th><th>Kind</th></tr></thead>
+      <tbody id="history"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Free play</h2>
+    <div class="row role-toggle" id="roles"></div>
+    <div class="legend">Solid green = allowed for the current role. Dashed = would be blocked. You can still click it to see why.</div>
+    <div class="row" id="moves"></div>
+    <div class="row">
+      <button id="reopen">Reopen application</button>
+      <button id="reset">Start over (new application in Applied)</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Guided walkthroughs</h2>
+    <div class="tabs" id="tabs"></div>
+    <div id="scenario"></div>
+  </section>
+</main>
+
+<script>
+// ---------- Pure logic module (no DOM) ----------
+const Pipeline = (() => {
+  const LABEL = {
+    APPLIED: 'Applied', SCREENING: 'Screening', INTERVIEW: 'Interview', FINAL_REVIEW: 'Final Review',
+    OFFER: 'Offer', HIRED: 'Hired', REJECTED: 'Rejected', WITHDRAWN: 'Withdrawn',
+  };
+  const ROLE_LABEL = { RECRUITER: 'Recruiter', MANAGER: 'Hiring Manager' };
+  const MAIN = ['APPLIED', 'SCREENING', 'INTERVIEW', 'FINAL_REVIEW', 'OFFER', 'HIRED'];
+  const ACTIVE = ['APPLIED', 'SCREENING', 'INTERVIEW', 'FINAL_REVIEW'];
+  const EXITS = ['REJECTED', 'WITHDRAWN'];
+  const ALL = [...MAIN, ...EXITS];
+
+  const ok = (why) => ({ ok: true, why });
+  const no = (why) => ({ ok: false, why });
+
+  function initial(stage = 'APPLIED', stageBeforeExit = null) {
+    return { stage, stageBeforeExit, history: [] };
+  }
+
+  function checkMove(state, role, to) {
+    const from = state.stage;
+    if (to === from) return no(`The application is already in ${LABEL[from]}.`);
+    if (from === 'HIRED') return no('Hired is permanent. No further moves are allowed.');
+    if (EXITS.includes(from)) return no(`${LABEL[from]} is a closed outcome. A Hiring Manager must reopen it first.`);
+    if (EXITS.includes(to)) return ok(`Anyone can move an application to ${LABEL[to]}.`);
+    if (from === 'OFFER') {
+      if (to !== 'HIRED') return no('From Offer, the only moves are Hired, Rejected, or Withdrawn.');
+      return role === 'MANAGER' ? ok('Hiring Manager confirmed the hire.') : no('Only a Hiring Manager can mark someone Hired.');
+    }
+    if (to === 'HIRED') return no('Hired can only be reached from Offer.');
+    if (to === 'OFFER') {
+      if (from !== 'FINAL_REVIEW') return no('An offer can only be made from Final Review.');
+      return role === 'MANAGER' ? ok('Hiring Manager made an offer.') : no('Only a Hiring Manager can make an offer.');
+    }
+    const f = ACTIVE.indexOf(from), t = ACTIVE.indexOf(to);
+    if (t > f) return ok(t - f > 1 ? `Forward jump, skipping ${t - f - 1} stage(s).` : 'Forward one step.');
+    if (t === f - 1) return ok('Back one step (correcting a mistake).');
+    return no(`Moving back more than one step isn't allowed (${LABEL[from]} → ${LABEL[to]} is ${f - t} steps back).`);
+  }
+
+  function checkReopen(state, role) {
+    if (state.stage === 'HIRED') return no('Hired is permanent and cannot be reopened.');
+    if (!EXITS.includes(state.stage)) return no('Only Rejected or Withdrawn applications can be reopened.');
+    if (role !== 'MANAGER') return no('Only a Hiring Manager can reopen an application.');
+    return ok(`Reopened back to ${LABEL[state.stageBeforeExit]}.`);
+  }
+
+  // (state, action) => { state, result }
+  function dispatch(state, action) {
+    if (action.type === 'move') {
+      const result = checkMove(state, action.role, action.to);
+      if (!result.ok) return { state, result };
+      const entry = { from: state.stage, to: action.to, role: action.role, kind: 'Move' };
+      return {
+        state: {
+          stage: action.to,
+          stageBeforeExit: EXITS.includes(action.to) ? state.stage : null,
+          history: [...state.history, entry],
+        },
+        result,
+      };
+    }
+    if (action.type === 'reopen') {
+      const result = checkReopen(state, action.role);
+      if (!result.ok) return { state, result };
+      const entry = { from: state.stage, to: state.stageBeforeExit, role: action.role, kind: 'Reopen' };
+      return {
+        state: { stage: state.stageBeforeExit, stageBeforeExit: null, history: [...state.history, entry] },
+        result,
+      };
+    }
+    return { state, result: no('Unknown action.') };
+  }
+
+  return { LABEL, ROLE_LABEL, MAIN, EXITS, ALL, initial, checkMove, checkReopen, dispatch };
+})();
+
+// ---------- Scenarios ----------
+const R = 'RECRUITER', M = 'MANAGER';
+const mv = (role, to, expect) => ({ action: { type: 'move', role, to }, expect });
+const ro = (role, expect) => ({ action: { type: 'reopen', role }, expect });
+
+const SCENARIOS = [
+  {
+    name: 'Happy path',
+    desc: 'A recruiter takes a candidate through screening and interviews. At the offer, the recruiter tries to send it themselves, then a Hiring Manager takes over. <strong>Watch:</strong> the recruiter is blocked at Offer, and the manager isn\'t.',
+    start: ['APPLIED'],
+    steps: [mv(R, 'SCREENING', 'allowed'), mv(R, 'INTERVIEW', 'allowed'), mv(R, 'FINAL_REVIEW', 'allowed'),
+            mv(R, 'OFFER', 'blocked'), mv(M, 'OFFER', 'allowed'), mv(M, 'HIRED', 'allowed')],
+  },
+  {
+    name: 'Fast-track & mistakes',
+    desc: 'A strong referral skips Screening and goes straight to Interview. Then someone tries to undo too far. <strong>Watch:</strong> forward jumps are fine, but going back is limited to one step at a time. <strong>Ask yourself:</strong> is "one step back" enough, or would recruiters need to step back twice in a row?',
+    start: ['APPLIED'],
+    steps: [mv(R, 'INTERVIEW', 'allowed'), mv(R, 'APPLIED', 'blocked'), mv(R, 'SCREENING', 'allowed'),
+            mv(R, 'APPLIED', 'allowed'), mv(R, 'OFFER', 'blocked')],
+  },
+  {
+    name: 'Rejected, then reopened',
+    desc: 'A candidate is rejected after the interview, and then the team changes its mind. <strong>Watch:</strong> a recruiter can reject but cannot undo it. Only a manager can reopen, and reopening returns the application to Interview, not to Applied.',
+    start: ['APPLIED'],
+    steps: [mv(R, 'SCREENING', 'allowed'), mv(R, 'INTERVIEW', 'allowed'), mv(R, 'REJECTED', 'allowed'),
+            mv(R, 'INTERVIEW', 'blocked'), ro(R, 'blocked'), ro(M, 'allowed')],
+  },
+  {
+    name: 'Offer declined',
+    desc: 'An offer is out, and the candidate turns it down. <strong>Watch:</strong> the recruiter can record the withdrawal. Nobody can send the application back to Final Review from Offer. <strong>Ask yourself:</strong> should Offer → Final Review be allowed (for example, to renegotiate)?',
+    start: ['OFFER'],
+    steps: [mv(M, 'FINAL_REVIEW', 'blocked'), mv(R, 'WITHDRAWN', 'allowed'), ro(M, 'allowed')],
+  },
+  {
+    name: 'Hired is final',
+    desc: 'A manager hires someone, and then people try to change it. <strong>Watch:</strong> even a Hiring Manager can\'t move or reopen a Hired application. <strong>Ask yourself:</strong> what if the new hire backs out before their start date?',
+    start: ['OFFER'],
+    steps: [mv(M, 'HIRED', 'allowed'), mv(M, 'WITHDRAWN', 'blocked'), ro(M, 'blocked')],
+  },
+];
+
+// ---------- Page shell ----------
+let state = Pipeline.initial();
+let role = R;
+let last = null;          // { result, actionText }
+let activeTab = 0, stepIndex = 0;
+
+const $ = (id) => document.getElementById(id);
+const L = Pipeline.LABEL, RL = Pipeline.ROLE_LABEL;
+
+function describe(action) {
+  return action.type === 'move'
+    ? `${RL[action.role]} moves it to ${L[action.to]}`
+    : `${RL[action.role]} reopens it`;
+}
+
+function run(action) {
+  const prev = state.stage;
+  const out = Pipeline.dispatch(state, action);
+  state = out.state;
+  last = { result: out.result, text: describe(action), changed: prev !== state.stage ? `${L[prev]} → ${L[state.stage]}` : null };
+  render();
+}
+
+function render() {
+  // pipeline
+  const p = $('pipeline'); p.innerHTML = '';
+  Pipeline.MAIN.forEach((s, i) => {
+    if (i) p.insertAdjacentHTML('beforeend', '<span class="arrow">→</span>');
+    p.insertAdjacentHTML('beforeend', `<span class="chip ${s === state.stage ? 'current' : ''}">${L[s]}</span>`);
+  });
+  p.insertAdjacentHTML('beforeend', '<span class="sep"></span>');
+  Pipeline.EXITS.forEach((s) => p.insertAdjacentHTML('beforeend', `<span class="chip ${s === state.stage ? 'current' : ''}">${L[s]}</span>`));
+
+  // fields
+  const status = state.stage === 'HIRED' ? 'Closed (permanent)' : Pipeline.EXITS.includes(state.stage) ? 'Closed (can be reopened by a manager)' : 'Active';
+  $('fields').innerHTML = [
+    ['Current stage', L[state.stage]],
+    ['Status', status],
+    ['Reopen would return to', state.stageBeforeExit ? L[state.stageBeforeExit] : '—'],
+    ['Acting as', RL[role] + (role === M ? ' (+ Recruiter permissions)' : '')],
+  ].map(([k, v]) => `<div class="field"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+
+  // result
+  const r = $('result');
+  if (!last) { r.className = 'result idle'; r.textContent = 'No action yet. Click a move below or start a walkthrough.'; }
+  else {
+    r.className = 'result ' + (last.result.ok ? 'ok' : 'bad');
+    r.innerHTML = `<strong>${last.result.ok ? 'Allowed' : 'Blocked'}:</strong> ${last.text}. ${last.result.why}` +
+      (last.changed ? ` <strong>Changed: ${last.changed}.</strong>` : ' <strong>Nothing changed.</strong>');
+  }
+
+  // history
+  $('history').innerHTML = state.history.length
+    ? state.history.map((h, i) => `<tr><td>${i + 1}</td><td>${L[h.from]}</td><td>${L[h.to]}</td><td>${RL[h.role]}</td><td>${h.kind}</td></tr>`).join('')
+    : '<tr><td colspan="5" style="color:var(--muted)">No stage changes yet. (Blocked attempts are not recorded.)</td></tr>';
+
+  // roles
+  $('roles').innerHTML = '';
+  [R, M].forEach((x) => {
+    const b = document.createElement('button');
+    b.textContent = 'Act as ' + RL[x];
+    if (x === role) b.className = 'active';
+    b.onclick = () => { role = x; render(); };
+    $('roles').appendChild(b);
+  });
+
+  // moves
+  $('moves').innerHTML = '';
+  Pipeline.ALL.forEach((to) => {
+    const c = Pipeline.checkMove(state, role, to);
+    const b = document.createElement('button');
+    b.className = 'move ' + (c.ok ? 'allowed' : 'blocked');
+    b.innerHTML = `Move to ${L[to]}<span class="tag">${c.ok ? '✓' : '✕'}</span>`;
+    b.title = c.why;
+    b.onclick = () => run({ type: 'move', role, to });
+    $('moves').appendChild(b);
+  });
+  const rc = Pipeline.checkReopen(state, role);
+  $('reopen').className = 'move ' + (rc.ok ? 'allowed' : 'blocked');
+  $('reopen').title = rc.why;
+
+  renderScenario();
+}
+
+function startScenario(i) {
+  activeTab = i; stepIndex = 0;
+  state = Pipeline.initial(...SCENARIOS[i].start);
+  last = null;
+  render();
+}
+
+function renderScenario() {
+  $('tabs').innerHTML = '';
+  SCENARIOS.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.textContent = s.name;
+    if (i === activeTab) b.className = 'active';
+    b.onclick = () => startScenario(i);
+    $('tabs').appendChild(b);
+  });
+  const s = SCENARIOS[activeTab];
+  const box = $('scenario');
+  box.innerHTML = `<p class="scenario-desc">${s.desc}<br>Starts with a fresh application in <strong>${L[s.start[0]]}</strong>.</p>`;
+  const ol = document.createElement('ol'); ol.className = 'steps';
+  s.steps.forEach((st, i) => {
+    const li = document.createElement('li');
+    li.className = i < stepIndex ? 'done' : i === stepIndex ? 'next' : '';
+    const b = document.createElement('button');
+    b.textContent = describe(st.action);
+    b.disabled = i !== stepIndex;
+    b.onclick = () => { role = st.action.role; stepIndex++; run(st.action); };
+    li.innerHTML = `<span class="num">${i + 1}</span>`;
+    li.appendChild(b);
+    li.insertAdjacentHTML('beforeend', `<span class="expect">expected: ${st.expect}</span>`);
+    ol.appendChild(li);
+  });
+  box.appendChild(ol);
+  const restart = document.createElement('button');
+  restart.textContent = 'Restart this scenario';
+  restart.style.marginTop = '14px';
+  restart.onclick = () => startScenario(activeTab);
+  box.appendChild(restart);
+}
+
+$('reopen').onclick = () => run({ type: 'reopen', role });
+$('reset').onclick = () => { state = Pipeline.initial(); last = null; render(); };
+
+startScenario(0);
+</script>
+</body>
+</html>
