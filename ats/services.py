@@ -14,6 +14,14 @@ def save_candidate(candidate):
     return candidate
 
 
+def save_job(user, job):
+    if job.pk is None:
+        job.created_by = user
+    job.full_clean()
+    job.save()
+    return job
+
+
 @transaction.atomic
 def move_application(user, application, target):
     reason = refusal_reason(user, application, target)

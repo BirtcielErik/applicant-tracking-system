@@ -1,13 +1,13 @@
 from django.contrib.auth.decorators import permission_required
-from django.db.models import Max, Q, Value
+from django.db.models import Count, Max, Q, Value
 from django.db.models.functions import Coalesce, Concat
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from . import services
-from .forms import CandidateForm
+from .forms import CandidateForm, JobForm
 from .models import Application, Candidate, JobOpening
-from .pipeline import Stage, allowed_targets
+from .pipeline import ACTIVE_STAGES, Stage, allowed_targets
 
 
 def board_context(job, user, move_error=None):
@@ -38,13 +38,43 @@ def candidate_form_response(request, candidate=None):
     )
 
 
+def job_form_response(request, job=None):
+    data = request.POST if request.method == "POST" else None
+    form = JobForm(data, instance=job)
+    if form.is_valid():
+        saved = services.save_job(request.user, form.save(commit=False))
+        return redirect("ats:job_detail", pk=saved.pk)
+    return render(request, "ats/job_form.html", {"form": form, "job": job})
+
+
 def home(request):
-    return render(request, "ats/home.html")
+    show_closed = request.GET.get("status") == JobOpening.Status.CLOSED
+    status = JobOpening.Status.CLOSED if show_closed else JobOpening.Status.OPEN
+    jobs = (
+        JobOpening.objects.filter(status=status)
+        .select_related("created_by")
+        .annotate(
+            active_applicants=Count(
+                "applications", filter=Q(applications__stage__in=ACTIVE_STAGES)
+            )
+        )
+    )
+    return render(request, "ats/home.html", {"jobs": jobs, "show_closed": show_closed})
+
+
+@permission_required("ats.add_jobopening", raise_exception=True)
+def job_create(request):
+    return job_form_response(request)
 
 
 def job_detail(request, pk):
-    job = get_object_or_404(JobOpening, pk=pk)
+    job = get_object_or_404(JobOpening.objects.select_related("created_by"), pk=pk)
     return render(request, "ats/job_detail.html", board_context(job, request.user))
+
+
+@permission_required("ats.change_jobopening", raise_exception=True)
+def job_edit(request, pk):
+    return job_form_response(request, get_object_or_404(JobOpening, pk=pk))
 
 
 def candidate_list(request):

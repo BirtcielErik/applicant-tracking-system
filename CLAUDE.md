@@ -25,6 +25,7 @@ An internal, staff-only Django web application for hiring teams to manage job op
 - URLs are named, namespaced under `ats`, and use integer pks.
 - Group permissions for new models are granted by data migration.
 - `Candidate` lowercases its email in both `save` and `clean`, so case variants fail validation in forms and the admin.
+- Forms use `DaisyFormMixin` for field styling.
 
 ## Development
 

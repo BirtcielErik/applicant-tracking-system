@@ -1,8 +1,44 @@
 {% extends "ats/base.html" %}
 
-{% block title %}Home | Applicant Tracking System{% endblock %}
+{% block title %}Jobs | Applicant Tracking System{% endblock %}
 
 {% block content %}
-  <h1 class="text-2xl font-bold">Welcome, {{ user.get_username }}</h1>
-  <p class="mt-2 opacity-60">Job openings will appear here.</p>
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold">Jobs</h1>
+    {% if perms.ats.add_jobopening %}
+      <a class="btn btn-primary btn-sm" href="{% url 'ats:job_create' %}">New job</a>
+    {% endif %}
+  </div>
+  <div class="tabs tabs-box w-fit mb-4" role="tablist" aria-label="Filter jobs by status">
+    <a class="tab{% if not show_closed %} tab-active{% endif %}" role="tab" href="{% url 'ats:home' %}">Open</a>
+    <a class="tab{% if show_closed %} tab-active{% endif %}" role="tab" href="{% url 'ats:home' %}?status=closed">Closed</a>
+  </div>
+  <div class="card bg-base-100 shadow-sm overflow-x-auto">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Department</th>
+          <th>Location</th>
+          <th>Active applicants</th>
+          <th>Created by</th>
+          {% if show_closed %}<th>Closed</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in jobs %}
+          <tr>
+            <td><a class="link" href="{% url 'ats:job_detail' job.pk %}">{{ job.title }}</a></td>
+            <td>{{ job.department }}</td>
+            <td>{{ job.location }}</td>
+            <td data-active-applicants="{{ job.active_applicants }}">{{ job.active_applicants }}</td>
+            <td>{{ job.created_by }}</td>
+            {% if show_closed %}<td>{{ job.closed_at|date:"M j, Y" }}</td>{% endif %}
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="opacity-60">No {% if show_closed %}closed{% else %}open{% endif %} jobs.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endblock %}

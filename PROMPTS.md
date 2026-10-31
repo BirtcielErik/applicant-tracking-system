@@ -28,6 +28,38 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-10-31 — Phase 6: job management with TDD
+
+### Prompts
+1. `/implement @prd/applicant-tracking-system.md @plans/applicant-tracking-system.md Implement Phase 6`
+2. Approve
+3. Approved, go ahead
+4. Approved, go ahead with cycle 2
+5. Approved, go ahead
+6. Approved, go ahead with cycle 3
+7. Approved, go ahead
+8. Approved, go ahead with the rest of Phase 6
+9. The "Open" and "Closed" badges on the boards page should be color coded - green for open and red for closed
+10. Manual checks pass - please update CLAUDE.md with any relevant new commands, project structure, or conventions - be as succint as possible
+11. Keep the note about the convention to use DaisyFormMixIn - do not include the specifics of how JobForm works
+
+### Summary
+- **Outcome:** Phase 6 was built and kept: the home page is now the jobs list, with open jobs by default, Open and Closed tabs through `?status=closed`, a count of active applicants from a single annotated query, and the creator on each row. Staff can create and edit jobs through `JobForm`, and `save_job` in `ats/services.py` sets the creator on new jobs only. The job page gained its details, creator, closed date, a color-coded status badge, and an Edit button. Three behaviors were built with TDD (active-only counts, the open and closed filter, creator and Open status despite a forged POST), and the rest followed the normal process. Ruff passes, all 415 tests pass, and the manual browser checks passed. `CLAUDE.md` gained one line on `DaisyFormMixin`.
+- **Deviations:**
+  - All three proposed TDD behaviors and every RED and GREEN checkpoint were approved without changes.
+  - During manual checks the user asked for the status badge to be green for Open and red for Closed.
+  - The user rejected the first `CLAUDE.md` line and asked to keep only the `DaisyFormMixin` convention, without the `JobForm` details.
+  - The commit uses `Implement Phase 6` from the saved feedback, not the format in the implement skill.
+  - Claude moved the form styling into a shared `DaisyFormMixin`, which also changed `CandidateForm`, and raised it at the cycle 3 RED step.
+  - Claude added a Jobs link to the navbar without being asked.
+- **Sideways:**
+  - The first manual verification list gave Backend Engineer's count as 4, with a confusing note, when the seed data gives 5. It was a miscount by Claude, not an app bug, and Claude corrected it in the next message.
+  - For cycle 3 Claude deliberately put `status` and `created_by` in the temporary form so the test would fail on an assertion. Claude said so at the RED step. Only the creator assertion was seen failing, because it stopped the test before the status assertion ran.
+  - The tests added after the TDD cycles were written against finished code, so none of them were seen failing first.
+  - Rejecting the `CLAUDE.md` edit also cancelled the `PROMPTS.md` edit and the commit in the same batch. Claude resubmitted both after the shorter line.
+  - Claude did not run the pages in a browser, so the styling was first exercised during the user's manual checks, which led to the badge request.
+  - Status still changes only through the admin until Phase 10, and the admin does not set `closed_at` by itself.
+
 ## 2026-10-31 — Phase 5: candidate management with TDD
 
 ### Prompts

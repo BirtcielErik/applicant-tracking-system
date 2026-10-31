@@ -1,0 +1,24 @@
+{% extends "ats/base.html" %}
+
+{% block title %}{% if job %}Edit {{ job }}{% else %}New job{% endif %} | Applicant Tracking System{% endblock %}
+
+{% block content %}
+  <div class="card bg-base-100 shadow-sm max-w-lg">
+    <form class="card-body" method="post">
+      {% csrf_token %}
+      <h1 class="card-title">{% if job %}Edit {{ job }}{% else %}New job{% endif %}</h1>
+      <p class="text-sm opacity-60">Fields marked <span class="text-error">*</span> are required.</p>
+      {% for field in form %}
+        <label class="label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-error" aria-hidden="true">*</span>{% endif %}</label>
+        {{ field }}
+        {% for error in field.errors %}
+          <p class="text-error text-sm">{{ error }}</p>
+        {% endfor %}
+      {% endfor %}
+      <div class="flex gap-2 mt-4">
+        <button class="btn btn-primary" type="submit">Save</button>
+        <a class="btn btn-ghost" href="{% if job %}{% url 'ats:job_detail' job.pk %}{% else %}{% url 'ats:home' %}{% endif %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
