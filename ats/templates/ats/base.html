@@ -1,0 +1,28 @@
+{% load tailwind_cli %}<!doctype html>
+<html lang="en" data-theme="corporate">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Applicant Tracking System{% endblock %}</title>
+    {% tailwind_css %}
+  </head>
+  <body class="bg-base-200 min-h-screen">
+    {% if user.is_authenticated %}
+      <nav class="navbar bg-base-100 shadow-sm px-4">
+        <div class="flex-1">
+          <a class="font-bold text-lg" href="{% url 'ats:home' %}">ATS</a>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="text-sm opacity-60">{{ user.get_username }}</span>
+          <form method="post" action="{% url 'ats:logout' %}">
+            {% csrf_token %}
+            <button class="btn btn-ghost btn-sm" type="submit">Log out</button>
+          </form>
+        </div>
+      </nav>
+    {% endif %}
+    <main class="p-4">
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

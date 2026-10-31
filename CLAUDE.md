@@ -21,6 +21,15 @@ An internal, staff-only Django web application for hiring teams to manage job op
 - Views are thin: they check login and permissions, call a service, and render a template or partial.
 - Every view requires login. Manager-only actions are checked on the server and hidden in the UI.
 - Roles are Django groups created by data migration. Accounts and group membership are managed only in Django Admin.
+- `LoginRequiredMiddleware` protects every view by default.
+- URLs are named, namespaced under `ats`, and use integer pks.
+
+## Development
+
+- Layout: `config/` is the project, `ats/` is the app, and `tailwind/source.css` is the Tailwind source.
+- Run: `uv run python manage.py tailwind runserver`
+- Check: `uv run ruff check .`, `uv run ruff format .`, and `uv run pytest`
+- Shared test fixtures are in `ats/tests/conftest.py`.
 
 ## Project documents
 

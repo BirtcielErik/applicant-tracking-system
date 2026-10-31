@@ -28,6 +28,38 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-10-31 — Phase 1: authenticated shell with TDD for roles and login
+
+### Prompts
+1. `/implement @prd/applicant-tracking-system.md @plans/applicant-tracking-system.md Implement Phase 1`
+2. Approved, go ahead with all three
+3. Please use the diff feature to write new code instead of doing it through the command line - I want to be able to easily see the code you are proposing to write
+4. Approved, go ahead
+5. Approved, go ahead with cycle 2
+6. Approved, go ahead
+7. Approved, go ahead with cycle 3
+8. Approved, go ahead
+9. Approved, go ahead with the rest of Phase 1
+10. Manual checks pass, go ahead
+11. Update CLAUDE.md - add only a few lines and include the most important new commands, project layout information, architecture/URL conventions, and testing info
+12. Can you be more succint?
+13. go ahead
+
+### Summary
+- **Outcome:** Phase 1 was built and kept: the uv project, the `config` project and `ats` app, the custom User model, a data migration creating the Recruiter and Hiring Manager groups with seven manager-only permissions, DaisyUI login and home pages in a shared layout, logout, Django Admin user management, Ruff, pytest, and a README. Three behaviors were built with TDD (roles and permissions on a fresh database, combined role permissions, anonymous redirect), and the rest followed the normal process. Ruff passes, all 19 tests pass, and the manual browser checks passed. `CLAUDE.md` gained short notes on conventions, layout, commands, and fixtures.
+- **Deviations:**
+  - The user rejected a shell command that wrote several files at once and asked for code to go through the diff view. All later code used the Edit and Write tools.
+  - The user rejected the first `PROMPTS.md` and commit step to update `CLAUDE.md` first, then rejected the first `CLAUDE.md` draft as too long and asked for a shorter one.
+  - All three proposed TDD behaviors and every RED and GREEN checkpoint were approved without changes.
+  - Claude chose `LoginRequiredMiddleware` over per-view decorators, and the user approved it at the cycle 3 RED step.
+- **Sideways:**
+  - The system check warned that the Tailwind source file sat inside the static directory, so it was moved to `tailwind/source.css`.
+  - Ruff failed on long lines in generated code, which stopped the command chain before the tests ran. Line-length checks were turned off for migrations and `config/settings.py` only, and the tests were rerun.
+  - A server cleanup command fell back to a broad `taskkill` on Python processes because `pkill` does not exist on this machine. The test server survived it, which suggests it matched nothing, though that could not be proven. The server was then stopped by PID, and the user was told.
+  - The same command wrote a stray log to `/tmp` instead of the scratchpad. It was deleted.
+  - The Recruiter group has no permissions until Phase 2, so the Recruiter assertions in the role test are trivially true for now.
+  - `tailwind runserver` was not run by Claude and was first exercised during the user's manual checks.
+
 ## 2026-10-29 — Grill-me design interview, two prototypes, and PRD for the ATS
 
 ### Prompts

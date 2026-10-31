@@ -1,0 +1,28 @@
+{% extends "ats/base.html" %}
+
+{% block title %}Log in | Applicant Tracking System{% endblock %}
+
+{% block content %}
+  <div class="flex justify-center pt-16">
+    <div class="card bg-base-100 shadow-sm w-full max-w-sm">
+      <form class="card-body" method="post">
+        {% csrf_token %}
+        <h1 class="card-title">Applicant Tracking System</h1>
+        {% if form.non_field_errors %}
+          <div class="alert alert-error" role="alert">
+            {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
+          </div>
+        {% endif %}
+        <label class="label" for="id_username">Username</label>
+        <input class="input w-full" id="id_username" name="username" type="text"
+               value="{{ form.username.value|default_if_none:'' }}"
+               autocomplete="username" autofocus required>
+        <label class="label" for="id_password">Password</label>
+        <input class="input w-full" id="id_password" name="password" type="password"
+               autocomplete="current-password" required>
+        <input type="hidden" name="next" value="{{ next }}">
+        <button class="btn btn-primary mt-4" type="submit">Log in</button>
+      </form>
+    </div>
+  </div>
+{% endblock %}

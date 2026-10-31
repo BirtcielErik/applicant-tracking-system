@@ -1,0 +1,8 @@
+{% extends "ats/base.html" %}
+
+{% block title %}Home | Applicant Tracking System{% endblock %}
+
+{% block content %}
+  <h1 class="text-2xl font-bold">Welcome, {{ user.get_username }}</h1>
+  <p class="mt-2 opacity-60">Job openings will appear here.</p>
+{% endblock %}
